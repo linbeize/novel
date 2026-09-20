@@ -9,68 +9,14 @@ var hot_timer = null;
 var currentIndex = 0;
 var picCount = {{.BannerSlicesCount}};
 </script>
-<div class="read-banner" onmouseover="$('.banner-btn').show()" onmouseout="$('.banner-btn').hide()">
-    <!--banner轮播 需要计算每个li的背景色以及透明度-->
-    <ul class="r-banner-list" id="scrollBox">
-		{{range .BannerSlices}}
-		 <li style="{{css .Ext}}">
-			<a href="{{.Link}}" target="_blank" class="img-box">
-				<img src="{{.Img}}" alt="{{.Name}}">
-			</a>
-		</li>
-		{{end}}
-    </ul>
-    
-    <!--//banner轮播-->
-    <!--小圆点（两种位置pager1和pager2，pager为两种共有）-->
-    <div class="pager pager1" id="scrollSmallBox">
-	{{range $k, $v := .BannerSlices}}	
-		<a uigs="none_home_top_pic_index" href="javascript:void(0)" onmouseover="clearTimeout(hot_timer);hot_timer=setTimeout(function(){scrollBox({{$k}}, 500);},50)" onmouseout="clearTimeout(hot_timer)" {{if eq $k 0}}class="cur"{{end}}></a>
-	{{end}}
-    </div>
-    
-    <!--//小圆点-->
-    <!--左右方向键（右方向键有两种位置right-btn1和right-btn2，right-btn为两种共有）-->
-    <a uigs="none_home_top_pic_right" style="display: none;" href="javascript:void(0)" onclick="scrollBox(currentIndex + 1, 500)" class="banner-btn right-btn right-btn1">
-        <div class="btn-shadow" style="background-color: transparent; opacity: 0.078;"></div>
-    </a>
-    <a uigs="none_home_top_pic_left" style="display: none;" href="javascript:void(0)" onclick="scrollBox(currentIndex - 1, 500)" class="banner-btn left-btn">
-        <div class="btn-shadow" style="background-color: transparent; opacity: 0.078;"></div>
-    </a>
 
-<script>
-function scrollBox(_index, scrollDuration) {
-	var index = (_index + picCount) % picCount;
 
-	if (index == currentIndex) {
-		return;
-	}
-	
-	$("#scrollBox li:eq(" + index + ")").fadeIn(scrollDuration);
-	$("#scrollBox li:eq(" + currentIndex + ")").fadeOut(scrollDuration);
-	
-	currentIndex = index;
-	$("#scrollSmallBox a").removeClass("cur");
-	$("#scrollSmallBox a:eq(" + currentIndex + ")").addClass("cur");
-}
 
-$(document).ready(function() {
-	myScroll = setInterval(function(){ scrollBox(currentIndex + 1, 1500); }, 5000);
-    $(".m_banner").hover(function() {
-        clearInterval(myScroll);
-        }, function() {
-            myScroll = setInterval(function(){ scrollBox(currentIndex + 1, 1500); }, 5000);
-        }
-	);
-});
-</script>
-</div>
 
-<!--
 <div class="read-notice">
 	<em>公告：</em>为响应国家净网行动，部分小说或章节不予展示，感谢读者理解。
 </div>
- -->
+
 
 <div class="r-section">
     <div class="r-left">
@@ -140,7 +86,7 @@ $(document).ready(function() {
     </div>
 </div>
 
-<div class="r-show">
+<div class="r-show" style="display: none;">
 	{{range $k, $v := .BannerSmalls}}
  	<a href="{{$v.Link}}" target="_blank" class="{{if eq $k 0}} lf-img{{else}}rt-img{{end}}">
         <img src="{{$v.Img}}" alt="{{$v.Name}}">

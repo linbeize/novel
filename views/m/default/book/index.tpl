@@ -26,7 +26,7 @@
 	{{if not_nil .FirstChap}}
         <div class="detail-read-btn">
 			<a href="{{urlfor "m.BookController.Detail" "id" .FirstChap.Id "novid" .Nov.Id}}">开始阅读</a>
-			<a id="down_all" href="javascript:void(0)">离线全本</a>
+			<a id="down_all" href="javascript:void(0)">加入书架</a>
 		</div>
 	{{end}}
 

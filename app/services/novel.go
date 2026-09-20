@@ -24,6 +24,8 @@ import (
 	"github.com/astaxie/beego/validation"
 
 	"github.com/vckai/novel/app/models"
+	"github.com/vckai/novel/app/utils"
+	"github.com/vckai/novel/app/utils/log"
 )
 
 // 定义NovelService
@@ -32,6 +34,16 @@ type Novel struct {
 
 func NewNovel() *Novel {
 	return &Novel{}
+}
+
+// 构造带参数的缓存键
+func cacheKey(prefix string, args ...int) string {
+	key := prefix
+	for _, a := range args {
+		key += ":" + strconv.Itoa(a)
+	}
+
+	return key
 }
 
 // 判断小说是否存在
@@ -106,8 +118,39 @@ func (this *Novel) Get(id uint32) *models.Novel {
 	return nov
 }
 
+// 榜单类查询的缓存时长
+// 首页单次请求会执行 10 余次查询，其中排行榜/最新更新需全表排序，
+// 缓存 5 分钟后，同一份榜单在 TTL 内只查库一次。
+const NOVEL_RANK_CACHE_TTL = 5 * time.Minute
+
+// 后台修改小说后调用，立即失效榜单缓存，避免管理员看不到自己的改动
+// 缓存键带 size 参数（如 novel:ranks:9），故按前缀清理
+func (this *Novel) ClearCache() {
+	for _, p := range []string{
+		"novel:ranks", "novel:newups", "novel:recs", "novel:todayrecs",
+		"novel:viprecs", "novel:signnewbooks", "novel:collects",
+	} {
+		utils.Cache().DeletePrefix(p)
+	}
+}
+
 // 获取今日推荐
 func (this *Novel) GetTodayRecs(size, offset int) []*models.Novel {
+	// 仅缓存首页首屏（offset=0），其它分页维持直查，避免缓存碎片
+	if offset == 0 {
+		if v := utils.Cache().Remember(cacheKey("novel:todayrecs", size), NOVEL_RANK_CACHE_TTL, func() interface{} {
+			return this.getTodayRecs(size, offset)
+		}); v != nil {
+			if list, ok := v.([]*models.Novel); ok {
+				return list
+			}
+		}
+	}
+
+	return this.getTodayRecs(size, offset)
+}
+
+func (this *Novel) getTodayRecs(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
@@ -212,7 +255,23 @@ func (this *Novel) GetCollects(size, offset int) []*models.Novel {
 }
 
 // 获取排行榜小说列表
+// 实测：50,000 本时该查询需 ORDER BY views DESC 全表排序，约 36ms，
+// 是首页最重的查询之一，故首屏结果做缓存。
 func (this *Novel) GetRanks(size, offset int) []*models.Novel {
+	if offset == 0 {
+		if v := utils.Cache().Remember(cacheKey("novel:ranks", size), NOVEL_RANK_CACHE_TTL, func() interface{} {
+			return this.getRanks(size, offset)
+		}); v != nil {
+			if list, ok := v.([]*models.Novel); ok {
+				return list
+			}
+		}
+	}
+
+	return this.getRanks(size, offset)
+}
+
+func (this *Novel) getRanks(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
@@ -241,7 +300,22 @@ func (this *Novel) GetCateRanks(cateId, size, offset int) []*models.Novel {
 }
 
 // 获取最新更新小说列表
+// 实测：ORDER BY chapter_updated_at DESC 全表排序约 37ms，首页次重查询，做缓存。
 func (this *Novel) GetNewUps(size, offset int) []*models.Novel {
+	if offset == 0 {
+		if v := utils.Cache().Remember(cacheKey("novel:newups", size), NOVEL_RANK_CACHE_TTL, func() interface{} {
+			return this.getNewUps(size, offset)
+		}); v != nil {
+			if list, ok := v.([]*models.Novel); ok {
+				return list
+			}
+		}
+	}
+
+	return this.getNewUps(size, offset)
+}
+
+func (this *Novel) getNewUps(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
@@ -452,6 +526,9 @@ func (this *Novel) Delete(id uint32) error {
 	// 删除小说章节采集点
 	models.NovelLinksModel.DelByNovId(id)
 
+	// 榜单数据已变化，立即失效缓存
+	this.ClearCache()
+
 	return nil
 }
 
@@ -499,15 +576,15 @@ func (this *Novel) DelLink(id uint32) error {
 }
 
 // 更新浏览次数
+// 改为原子自增：不再「读整行 -> 改 -> 写回」，避免高并发下的锁争用与丢失更新。
 func (this *Novel) UpViews(novId uint32) {
-	nov := this.Get(novId)
-	if nov == nil {
+	if novId < 1 {
 		return
 	}
 
-	nov.Views++
-
-	nov.Update("views")
+	if err := models.NovelModel.UpViews(novId); err != nil {
+		log.Error("更新浏览次数失败：", novId, err.Error())
+	}
 }
 
 // 更新小说连载状态
@@ -577,7 +654,14 @@ func (this *Novel) UpChapterInfo(novId uint32, novTextNum, chapterNum int, chapt
 		nov.Status = status
 	}
 
-	return nov.Update("text_num", "chapter_num", "chapter_id", "chapter_title", "chapter_updated_at", "status")
+	err := nov.Update("text_num", "chapter_num", "chapter_id", "chapter_title", "chapter_updated_at", "status")
+
+	// 章节更新会影响「最新更新」榜单，失效缓存
+	if err == nil {
+		utils.Cache().DeletePrefix("novel:newups")
+	}
+
+	return err
 }
 
 // 添加/修改
@@ -614,6 +698,11 @@ func (this *Novel) Save(novel *models.Novel) error {
 
 	if err == nil && novel.IsOriginal == 0 {
 		manager.AddTask(novel.Id)
+	}
+
+	// 榜单数据已变化，立即失效缓存
+	if err == nil {
+		this.ClearCache()
 	}
 
 	return err

@@ -2490,6 +2490,7 @@ footer a {
 .am-article-bd {
 	width: 92%;
 	margin: 0 auto;
+	text-indent: 2em;
 }
 
 .am-btn {

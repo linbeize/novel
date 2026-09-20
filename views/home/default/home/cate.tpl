@@ -118,19 +118,40 @@
 		"p": {{.Search.p}}
 	};
 
+	// 生成伪静态分类地址：/cate/{id}.html、/cate/{id}/p{n}.html、
+	// 带筛选时为 /cate/{id}/p{n}/{status}_{textnum}_{uptime}_{ot}.html
 	function gourl(name, value) {
 		// 重置分页
 		if (name != "p") {
 			params["p"] = 1;
 		}
-		params[name] = value
+		params[name] = value;
 
-		var url = new Array();
-
-		for (i in params) {
-			url.push(i + "=" + params[i]);
+		var cid = params["id"];
+		if (!cid || cid < 1) {
+			// 无分类时不生成分类路径（回退到原地址）
+			window.location.href = {{urlfor "home.HomeController.Cate"}};
+			return;
 		}
 
-		window.location.href = {{urlfor "home.HomeController.Cate"}} + "?" + url.join("&");
+		var base = "/cate/" + cid;
+		var p = parseInt(params["p"] || 1, 10);
+		var st = parseInt(params["status"] || 0, 10);
+		var tn = parseInt(params["text_num"] || 0, 10);
+		var ut = parseInt(params["uptime"] || 0, 10);
+		var ot = parseInt(params["ot"] || 1, 10);
+
+		// 无筛选且第 1 页 -> 最简形式
+		if (p <= 1 && st == 0 && tn == 0 && ut == 0 && ot == 1) {
+			window.location.href = base + ".html";
+			return;
+		}
+		// 无筛选 -> 只带页码
+		if (st == 0 && tn == 0 && ut == 0 && ot == 1) {
+			window.location.href = base + "/p" + p + ".html";
+			return;
+		}
+		// 有筛选 -> 固定 5 段
+		window.location.href = base + "/p" + p + "/" + st + "_" + tn + "_" + ut + "_" + ot + ".html";
 	}
 	</script>

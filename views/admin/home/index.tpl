@@ -142,7 +142,7 @@
                     </tr>
                     <tr>
                         <td>当前程序占用内存 </td>
-                        <td>3.29M</td>
+                        <td>{{.Mem}}M</td>
                     </tr>
                     <tr>
                         <td>当前Session数量 </td>

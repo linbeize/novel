@@ -3,6 +3,7 @@
     <p>
         {{.aOut.Copyright}} {{.aOut.Icp}} {{str2html .aOut.StatisticsCode}}
 	</p>
+	<p style="color:#999;font-size:12px;margin-top:4px;">{{perf}}</p>
 </div>
 
 <script type="text/javascript" src="{{.mOut.ViewUrl}}js/echo.js" charset="utf-8"></script>

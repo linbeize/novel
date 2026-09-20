@@ -1,0 +1,94 @@
+[
+  {
+    "name": "速读谷",
+    "code": "shudugu",
+    "url": "https://www.shudugu.org/",
+    "state": 1,
+    "is_update": 1,
+    "charset": "UTF-8",
+    "test": {
+      "book_url": "https://www.shudugu.org/126/",
+      "book_title": "科技入侵现代",
+      "book_author": "鸦的碎碎念",
+      "book_cate": "科幻小说",
+      "book_desc": "1960：林燃睁眼竟是60年代的纽约街头",
+      "book_cover": "https://www.shudugu.org/files/cover/202508/16c52c8e-66f6-4722-bb89-396b614815ca.jpg",
+      "book_chapter_url": "https://www.shudugu.org/126/",
+      "chapter_url": "https://www.shudugu.org/126/",
+      "chapter_catalog_url": "https://www.shudugu.org/126/100370.html",
+      "chapter_catalog_title": "第1章 欢迎来到1960",
+      "info_url": "https://www.shudugu.org/126/1004288.html",
+      "info_title": "第484章 寻找新的秩序",
+      "info_desc": "华国代表想到的不仅仅是51区",
+      "info_pre_page_url": "https://www.shudugu.org/126/986221.html",
+      "info_next_page_url": "https://www.shudugu.org/126/1004288-2.html",
+      "find_book_kw": "科技",
+      "find_book_url": "https://www.shudugu.org/126/"
+    },
+    "rules": {
+      "is_book_url": "^https://www\\.shudugu\\.org/[\\d]+/?$",
+      "is_crawler_url": "^https://www\\.shudugu\\.org/(xuanhuan|xianxia|dushi|lishi|junshi|kehuan|yanqing|qing|zhutianwuxian|qihuan|youxi|xuanyi|fenlei|paihang|wanjie|zuixin)/?$",
+      "book_title_selector": "h1 a",
+      "book_title_attr": "",
+      "book_title_filter": "",
+      "book_author_selector": ".itemtxt p:nth-of-type(2) a",
+      "book_author_attr": "",
+      "book_author_filter": "作者[：:]\\s*",
+      "book_cate_selector": ".itemtxt p:nth-of-type(1) span:nth-of-type(2)",
+      "book_cate_attr": "",
+      "book_cate_filter": "",
+      "book_desc_selector": ".des",
+      "book_desc_attr": "",
+      "book_desc_filter": "<[^>]+>",
+      "book_cover_selector": ".item img",
+      "book_cover_attr": "src",
+      "book_no_cover": "nocover",
+      "book_chapter_url_selector": "",
+      "book_chapter_url_attr": "",
+      "book_last_chapter_title_selector": ".itemtxt ul li:first-child a",
+      "book_last_chapter_title_attr": "",
+      "chapter_catalog_selector": "#list a",
+      "chapter_next_page_selector": "",
+      "chapter_abandon_num": 0,
+      "info_title_selector": "h1",
+      "info_title_filter": ".*>\\s*",
+      "info_desc_selector": ".con",
+      "info_desc_filter": "速读谷[^<]*\n一秒记住[^<]*\n请记住本书[^<]*\n本章未完[^<]*",
+      "info_pre_page_selector": ".prenext span:nth-of-type(1) a",
+      "info_next_page_selector": ".prenext span:nth-of-type(2) a",
+      "find_url": "https://www.shudugu.org/search?q=",
+      "find_charset": "",
+      "find_book_url_selector": ".list.clear li h3 a"
+    },
+    "cate_maps": [
+      {
+        "id": 1,
+        "name": "玄幻小说"
+      },
+      {
+        "id": 2,
+        "name": "仙侠小说"
+      },
+      {
+        "id": 3,
+        "name": "都市小说"
+      },
+      {
+        "id": 4,
+        "name": "历史小说"
+      },
+      {
+        "id": 7,
+        "name": "科幻小说"
+      },
+      {
+        "id": 11,
+        "name": "言情小说"
+      },
+      {
+        "id": 13,
+        "name": "其他类型"
+      }
+    ]
+  }
+]

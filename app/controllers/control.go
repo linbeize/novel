@@ -30,12 +30,25 @@ type BaseController struct {
 	i18n.Locale
 
 	Module string
+
+	// 请求性能统计
+	perf *utils.Perf
 }
 
 // 初始化操作
 func (this *BaseController) Prepare() {
 	defLang := beego.AppConfig.String("lang::default")
 	this.Lang = defLang
+
+	// 开始统计本次请求耗时
+	this.perf = utils.StartPerf()
+}
+
+// 请求结束：结束统计并释放资源
+func (this *BaseController) Finish() {
+	if this.perf != nil {
+		this.perf.Stop()
+	}
 }
 
 // 模板封装处理
@@ -146,6 +159,8 @@ func (this *BaseController) Msg(msg string, args ...interface{}) {
 }
 
 // 去除URLFor生成的URL前缀
+// 同时把前台小说的旧式地址改写为伪静态地址，
+// 使模板中所有 urlfor 调用无需逐个修改即可输出 /book/1.html 形式。
 func URLFor(endpoint string, values ...interface{}) string {
 	url := beego.URLFor(endpoint, values...)
 
@@ -156,6 +171,9 @@ func URLFor(endpoint string, values ...interface{}) string {
 	if adminURL := services.ConfigService.String("AdminURL"); adminURL != "" {
 		url = strings.Replace(url, "/admin/", "/", 1)
 	}
+
+	// 改写为伪静态地址（仅 PC 前台 /book/...）
+	url = utils.PrettyURL(endpoint, url)
 
 	return url
 }

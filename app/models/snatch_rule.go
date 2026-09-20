@@ -113,6 +113,15 @@ type Rule struct {
 	ChapterNextPageSelector string `json:"chapter_next_page_selector"` // 章节目录下一页选择器
 	ChapterAbandonNum       int    `json:"chapter_abandon_num"`        // 丢弃章节数（最新章节）
 
+	// 章节目录「URL 模板分页」规则
+	// 部分站点不提供"下一页"链接，目录页地址是按固定模板递增的，
+	// 例如 5566xs 的 /0/106/index_1.html、index_2.html ...
+	// 仅靠 ChapterNextPageSelector（CSS 选择器）无法翻页，故增加模板支持。
+	// ChapterPageURLTemplate 中的 {page} 会被替换为页码。
+	ChapterPageURLTemplate string `json:"chapter_page_url_template"`
+	ChapterPageStart       int    `json:"chapter_page_start"` // 起始页码，默认 1
+	ChapterPageMax         int    `json:"chapter_page_max"`   // 最大页数上限，防止死循环
+
 	// 详情页面采集规则
 	InfoTitleSelector    string `json:"info_title_selector"`
 	InfoTitleFilter      string `json:"info_title_filter"`

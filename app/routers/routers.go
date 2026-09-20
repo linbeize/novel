@@ -29,8 +29,13 @@ func init() {
 
 	// 首页路由
 	beego.Router("/", &home.HomeController{}, "GET:Index")
+	beego.Router("/history", &home.HomeController{}, "GET:History")
 	beego.AutoRouter(&home.HomeController{})
 	beego.AutoRouter(&home.BookController{})
+
+	// 前台伪静态路由（/book/1.html、/book/1/2.html）
+	// 与原 AutoRouter 并存，旧式地址 /book/index?id=1 继续可用
+	prettyRouters()
 
 	// 禁止浏览器页面缓存
 	var FilterNoCache = func(ctx *context.Context) {

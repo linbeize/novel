@@ -1,5 +1,6 @@
 
 <link href="{{.mOut.ViewUrl}}css/detail.css?v=aa6bf34e" rel="stylesheet" type="text/css">
+<script src="{{.mOut.ViewUrl}}js/bookcase.js"></script>
 
 <header class="hd-bar">
 	<a href="javascript:history.go(-1);" class="search-back" id="historyBack"></a>
@@ -114,4 +115,5 @@
             break;
         }
     }
+    lastread.set('{{.Nov.Id}}','{{.Chap.Id}}','{{.Nov.Name}}','{{.Chap.Title}}','{{.Nov.Author}}','{{.Nov.CateName}}');
 </script>

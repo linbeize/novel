@@ -76,3 +76,11 @@ func (this *HomeController) Feedback() {
 	this.Data["Title"] = "建议反馈"
 	this.View("home/feedback.tpl")
 }
+
+func (this *HomeController) History() {
+	
+	this.Data["Title"] = "历史记录"
+	this.Data["Cates"] = services.CateService.GetAll()
+
+	this.View("home/history.tpl")
+}

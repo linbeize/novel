@@ -42,6 +42,23 @@ type Snatch struct {
 }
 
 func NewSnatch() *Snatch {
+	// 注入采集节奏来源：读取后台可配置的间隔，便于随时调速而无需改代码
+	snatchs.SetPaceProvider(func() (time.Duration, time.Duration) {
+		// 单位毫秒；未配置时用默认值
+		interval := ConfigService.Int64("SnatchInterval", 1500)
+		jitter := ConfigService.Int64("SnatchJitter", 800)
+
+		if interval < 0 {
+			interval = 0
+		}
+		if jitter < 0 {
+			jitter = 0
+		}
+
+		return time.Duration(interval) * time.Millisecond,
+			time.Duration(jitter) * time.Millisecond
+	})
+
 	return &Snatch{
 		c: snatchs.NewSnatch(func() string {
 			return ProxyService.Get()
@@ -96,6 +113,12 @@ func (this *Snatch) GetNovel(source, rawurl string) (*snatchs.SnatchInfo, error)
 func (this *Snatch) GetChapter(source, rawurl string) (*snatchs.SnatchInfo, error) {
 	provider := SnatchRuleService.GetByCode(source)
 	return this.c.GetChapter(provider, rawurl)
+}
+
+// 获取小说章节内容（自动拼接同章分页正文）
+func (this *Snatch) GetChapterFull(source, rawurl string) (*snatchs.SnatchInfo, error) {
+	provider := SnatchRuleService.GetByCode(source)
+	return this.c.GetChapterFull(provider, rawurl)
 }
 
 // 获取小说章节列表

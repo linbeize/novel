@@ -206,6 +206,24 @@ html{color: #666}
                     </div>
                     <div class="layui-form-item">
                         <label class="layui-form-label">
+                            采集请求间隔
+                        </label>
+                        <div class="layui-input-inline">
+                            <input type="number" name="SnatchInterval" autocomplete="off" class="layui-input" placeholder="两次采集请求的最小间隔" value="{{.Config.SnatchInterval}}" />
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">单位：毫秒。调大可显著降低被源站限流的概率，建议 1500~5000</div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">
+                            采集随机抖动
+                        </label>
+                        <div class="layui-input-inline">
+                            <input type="number" name="SnatchJitter" autocomplete="off" class="layui-input" placeholder="在间隔之上附加的随机等待" value="{{.Config.SnatchJitter}}" />
+                        </div>
+                        <div class="layui-form-mid layui-word-aux">单位：毫秒。加入随机性，避免固定节奏被识别为爬虫</div>
+                    </div>
+                    <div class="layui-form-item">
+                        <label class="layui-form-label">
                             停更天数
                         </label>
                         <div class="layui-input-inline">

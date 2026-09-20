@@ -435,6 +435,9 @@
 
     </script>
 
+	<!-- 本次请求的服务端耗时统计 -->
+	<div style="text-align:center;color:#999;font-size:12px;padding:8px 0;">{{perf}}</div>
+
 </body>
 
 </html>

@@ -3,10 +3,10 @@
 
 	<nav class="nav">
 		<ul>
-			<li class="active"><a href="javascript:void(0)">精选</a></li>
+			<li class="active"><a href="javascript:void(0)">首页</a></li>
 			<li><a href="{{urlfor "m.BookController.List"}}">分类</a></li>
 			<li><a href="{{urlfor "m.BookController.Rank"}}">排行</a></li>
-			<!--<li><a href="javascript:void(0)">书架</a></li>-->
+			<li><a href="{{urlfor "m.HomeController.History"}}">书架</a></li>
 		</ul>
 	</nav>
 

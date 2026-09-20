@@ -30,6 +30,7 @@ import (
 
 	xhttp "github.com/vckai/novel/app/librarys/net/http"
 	"github.com/vckai/novel/app/models"
+	"github.com/vckai/novel/app/utils"
 	"github.com/vckai/novel/app/utils/log"
 )
 
@@ -259,6 +260,9 @@ func (this *Crawler) genrateURL(base *url.URL, rawurl string) (*url.URL, error) 
 
 // 网页请求
 // 返回goquery格式内容
+//
+// 加入全局节流：爬虫会递归遍历整站，是最容易触发源站限流的路径，
+// 原先却完全没有节流。现与采集共用同一节流器（同域名串行 + 最小间隔）。
 func (this *Crawler) NewHtml(rawurl string) (*goquery.Document, error) {
 	var res []byte
 	var body io.Reader
@@ -272,7 +276,14 @@ func (this *Crawler) NewHtml(rawurl string) (*goquery.Document, error) {
 			ProxyURL:  ProxyService.Get(),
 		})
 
+	throttle := utils.ThrottleInstance()
+	interval := time.Duration(ConfigService.Int64("SnatchInterval", 1500)) * time.Millisecond
+	jitter := time.Duration(ConfigService.Int64("SnatchJitter", 800)) * time.Millisecond
+
+	throttle.Wait(rawurl, interval, jitter)
 	res, _, err = c.Get(context.TODO(), rawurl, nil)
+	throttle.Done(rawurl)
+
 	if err != nil {
 		return nil, err
 	}

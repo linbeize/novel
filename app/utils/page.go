@@ -30,6 +30,11 @@ type Paginator struct {
 	pageRange []int
 	pageNums  int
 	page      int
+
+	// URLBuilder 可选：用于生成伪静态分页地址。
+	// 为 nil 时保持原行为（基于当前 query 修改 p 参数），
+	// 因此搜索页、章节列表等既有页面不受影响。
+	URLBuilder func(page int) string
 }
 
 func (p *Paginator) PageNums() int {
@@ -107,6 +112,11 @@ func (p *Paginator) PageNos() []int {
 }
 
 func (p *Paginator) PageLink(page int) string {
+	// 若注入了伪静态地址生成器，则优先使用
+	if p.URLBuilder != nil {
+		return p.URLBuilder(page)
+	}
+
 	link, _ := url.ParseRequestURI(p.Request.RequestURI)
 	values := link.Query()
 	if page == 1 {

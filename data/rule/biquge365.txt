@@ -1,0 +1,98 @@
+[
+  {
+    "name": "笔趣阁365",
+    "code": "biquge365",
+    "url": "https://www.biquge365.net/",
+    "state": 1,
+    "is_update": 1,
+    "charset": "UTF-8",
+    "test": {
+      "book_url": "https://www.biquge365.net/book/020701/",
+      "book_title": "云烟神帝",
+      "book_author": "风少依",
+      "book_cate": "玄幻魔法",
+      "book_desc": "世间万物，轮回往复，系以天择，适者存活",
+      "book_cover": "https://www.biquge365.net/files/article/image/2/2070/2070s.jpg",
+      "book_chapter_url": "https://www.biquge365.net/newbook/020701/",
+      "chapter_url": "https://www.biquge365.net/newbook/020701/",
+      "chapter_catalog_url": "https://www.biquge365.net/chapter/020701/54121546.html",
+      "chapter_catalog_title": "第一卷 第一章 帝国神将",
+      "info_url": "https://www.biquge365.net/chapter/020701/759420401.html",
+      "info_title": "第七百九十八章 动力的来源",
+      "info_desc": "云烟听出了孟紫怡话中的无奈",
+      "info_pre_page_url": "",
+      "info_next_page_url": "",
+      "find_book_kw": "云烟神帝",
+      "find_book_url": "https://www.biquge365.net/book/020701/"
+    },
+    "rules": {
+      "is_book_url": "^https://www\\.biquge365\\.net/book/[\\d]+/?$",
+      "is_crawler_url": "^https://www\\.biquge365\\.net/(sort/[\\d_]+/?|newbook/[\\d]+/?|quanben/?|top/?|lastupdate/?)$",
+      "book_title_selector": "h1",
+      "book_title_attr": "",
+      "book_title_filter": "",
+      "book_author_selector": "meta[name=author]",
+      "book_author_attr": "content",
+      "book_author_filter": "",
+      "book_cate_selector": ".nav li:nth-of-type(2) a",
+      "book_cate_attr": "",
+      "book_cate_filter": "",
+      "book_desc_selector": ".x3",
+      "book_desc_attr": "",
+      "book_desc_filter": "简介：[：:]\n--[^<]*\n云烟神帝",
+      "book_cover_selector": "meta[property='og:image']",
+      "book_cover_attr": "content",
+      "book_no_cover": "nocover.jpg",
+      "book_chapter_url_selector": "a[href*='/newbook/']",
+      "book_chapter_url_attr": "href",
+      "book_last_chapter_title_selector": ".x2 a",
+      "book_last_chapter_title_attr": "",
+      "chapter_catalog_selector": "ul.info a",
+      "chapter_next_page_selector": "",
+      "chapter_abandon_num": 0,
+      "info_title_selector": "h1",
+      "info_title_filter": "",
+      "info_desc_selector": "#txt",
+      "info_desc_filter": "<p[^>]*>一秒记住[^<]*</p>\n一秒记住[^<]*\n请记住本书[^<]*\n笔趣阁[^<]*biquge365[^<]*",
+      "info_pre_page_selector": "#fanye a:nth-of-type(1)",
+      "info_next_page_selector": "#fanye a:nth-of-type(3)",
+      "find_url": "https://www.biquge365.net/search.html?keyword=",
+      "find_charset": "",
+      "find_book_url_selector": ".bookbox .bookname a"
+    },
+    "cate_maps": [
+      {
+        "id": 1,
+        "name": "玄幻魔法"
+      },
+      {
+        "id": 2,
+        "name": "武侠修真"
+      },
+      {
+        "id": 3,
+        "name": "都市言情"
+      },
+      {
+        "id": 4,
+        "name": "历史军事"
+      },
+      {
+        "id": 6,
+        "name": "网游动漫"
+      },
+      {
+        "id": 7,
+        "name": "科幻小说"
+      },
+      {
+        "id": 8,
+        "name": "恐怖灵异"
+      },
+      {
+        "id": 13,
+        "name": "其他类型"
+      }
+    ]
+  }
+]

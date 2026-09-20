@@ -30,6 +30,17 @@ func RegisterFuncMap() {
 	beego.AddFuncMap("add", Add)
 	beego.AddFuncMap("css", Css)
 	beego.AddFuncMap("num_format", NumFormat)
+
+	// 页面底部性能统计：在模板渲染到该处时输出本次请求耗时
+	beego.AddFuncMap("perf", PerfReport)
+}
+
+// 供模板调用：输出当前请求的性能统计文本
+//
+// 由于是在模板渲染过程中取值，此时的耗时已包含数据库查询与
+// 渲染到该行之前的模版执行时间，最接近「服务端处理耗时」。
+func PerfReport() string {
+	return CurrentPerf().Report()
 }
 
 // 数字转换字符串

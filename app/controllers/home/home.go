@@ -19,6 +19,7 @@ import (
 
 	"github.com/vckai/novel/app/models"
 	"github.com/vckai/novel/app/services"
+	"github.com/vckai/novel/app/utils"
 )
 
 type HomeController struct {
@@ -131,7 +132,12 @@ func (this *HomeController) Cate() {
 	}
 	novs, count := services.NovelService.GetList(size, offset, search)
 	// 设置分页
-	this.SetPaginator(size, count)
+	// 注入伪静态地址生成器，使分页链接输出 /cate/1/p2.html 形式
+	pager := this.SetPaginator(size, count)
+	cateId, statusV, textNumV, upTimeV, otV := cid, status, textNum, upTime, ot
+	pager.URLBuilder = func(page int) string {
+		return utils.PrettyCateURL("", cateId, page, statusV, textNumV, upTimeV, otV)
+	}
 
 	this.Data["NovCount"] = count
 	this.Data["Novs"] = novs
@@ -197,4 +203,11 @@ func (this *HomeController) Search() {
 	this.Data["Title"] = q + "搜索结果"
 
 	this.View("home/search.tpl")
+}
+func (this *HomeController) History() {
+	
+	this.Data["Title"] = "历史记录"
+	this.Data["Cates"] = services.CateService.GetAll()
+	this.View("home/history.tpl")
+	
 }

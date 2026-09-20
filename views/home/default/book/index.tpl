@@ -27,6 +27,7 @@
 	    <!-- category -->
 	    <ul class="category-lst">
 	      <li><a href="{{urlfor "home.HomeController.Index"}}" class="category-tab txtlink">首页<i></i></a></li>
+	      <li><a href="{{urlfor "home.HomeController.Cate" "id" .Nov.CateId}}" class="category-tab txtlink">{{.Nov.CateName}}<i></i></a></li>
 	      <li>{{.Nov.Name}}</li>
 	    </ul>
 	    <!-- //category -->
@@ -48,6 +49,16 @@
 	          <tr>
 	            <td><strong>状态：</strong>{{.Nov.StatusName}}</td>
 	            <td><strong>字数：</strong>{{num_format .Nov.TextNum}}</td>
+	          </tr>
+	          <tr>
+	          <td>
+	          更新时间：{{datetime .Nov.UpdatedAt "2006-01-02"}}
+	          </td>
+	          </tr>
+	          <tr>
+	          <td>
+	          最新章节：<a href="{{urlfor "m.BookController.Detail" "id" .Nov.ChapterId "novid" .Nov.Id}}">{{.Nov.ChapterTitle}}</a>
+	          </td>
 	          </tr>
 	        </tbody></table>
 	        <p class="detail-description">

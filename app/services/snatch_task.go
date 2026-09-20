@@ -49,6 +49,12 @@ const (
 	HOUR_TO_TICK   int = 02
 	MINUTE_TO_TICK int = 03
 	SECOND_TO_TICK int = 05
+
+	// 分批入库的默认批次大小（章）。
+	// 原实现把所有章节累积在内存中、最后一次性写入，若中途进程退出
+	// （重启、被限流打断等）则本章节全部丢失。改为每累计 N 章落库一次，
+	// 保证已采集的内容不白费，并支持下次断点续采。
+	DEFAULT_BATCH_SIZE = 100
 )
 
 var manager = NewSnatchTaskManager()
@@ -86,7 +92,7 @@ func (this *SnatchTask) Run() {
 		log.Debug("[小说更新任务] ID:", this.novId, " 任务无法运行，状态:", this.runStatus)
 		return
 	}
-	
+
 	// 修改运行状态
 	this.upRunStatus(TASKRUNING)
 
@@ -272,11 +278,68 @@ func (this *SnatchTask) upChapter(source, chapLink string) uint8 {
 	novTextNum := 0
 	t1 := time.Now()
 	var chaps []*models.Chapter
+
+	// 批次大小：可通过后台 BatchSize 配置，默认 100 章
+	batchSize := ConfigService.Int("BatchSize", DEFAULT_BATCH_SIZE)
+	if batchSize < 1 {
+		batchSize = DEFAULT_BATCH_SIZE
+	}
+
+	// 已成功入库的章节数与字数（分批累计）
+	insertedNum := 0
+	insertedTextNum := 0
+
+	// 当前批次累计的字数
+	var batchTextNum int
+
+	// flush 把当前累积的章节写入数据库，并更新主表进度。
+	// 返回是否写入成功。
+	flush := func() bool {
+		if len(chaps) == 0 {
+			return true
+		}
+
+		if err := ChapterService.InsertMulti(chaps, isInit); err != nil {
+			log.Warn("[小说更新任务] ID:", nov.Id, " 小说:", nov.Name, " 分批写入失败:", err)
+			return false
+		}
+
+		insertedNum += len(chaps)
+		insertedTextNum += batchTextNum
+
+		// 每批次都更新主表，使前台能立即看到进度
+		last := ChapterService.GetLast(nov.Id)
+		lastId := uint64(0)
+		lastTitle := ""
+		if last != nil {
+			lastId = last.Id
+			lastTitle = last.Title
+		}
+		NovelService.UpChapterInfo(nov.Id, batchTextNum, len(chaps), lastId, lastTitle, status)
+
+		log.Info("[小说更新任务] ID:", nov.Id, " 小说:", nov.Name,
+			" 已分批入库:", insertedNum, "章")
+
+		// 重置累积
+		chaps = chaps[:0]
+		batchTextNum = 0
+
+		// 注意：此处刻意「不」修改 isInit。
+		// isInit 的含义是「本书是否首次采集」，决定插入方式：
+		//   true  -> 批量插入（快）
+		//   false -> 逐条插入并按标题查重（慢，且同名章节会被误判为重复而跳过）
+		// 同一次采集内章节链接唯一、不存在重复，保持原值即可；
+		// 跨次续采时 isInit 本就会因已有章节而为 false，查重依旧生效。
+
+		return true
+	}
+
 	for _, v := range links {
 		// 章节数累加
 		chapterNo++
 
-		info, err := SnatchService.GetChapter(source, v.Chap.Link)
+		// 自动拼接同章分页正文（部分站点把长章节拆成多页）
+		info, err := SnatchService.GetChapterFull(source, v.Chap.Link)
 
 		// 获取章节失败
 		if err != nil {
@@ -309,6 +372,7 @@ func (this *SnatchTask) upChapter(source, chapLink string) uint8 {
 		// 章节数统计
 		textNum := utf8.RuneCountInString(info.Chap.Desc)
 		novTextNum += textNum
+		batchTextNum += int(textNum)
 
 		chap.TextNum = uint32(textNum)
 		chap.NovId = nov.Id
@@ -329,10 +393,24 @@ func (this *SnatchTask) upChapter(source, chapLink string) uint8 {
 			status = models.BOOKFINISH
 		}
 
+		// 达到批次阈值即落库，避免中途失败导致全部丢失
+		if len(chaps) >= batchSize {
+			if !flush() {
+				return TASKWAIT
+			}
+		}
+
 		time.Sleep(time.Duration(100) * time.Microsecond)
 	}
 
-	if len(chaps) == 0 {
+	// 写入最后一批
+	if len(chaps) > 0 {
+		if !flush() {
+			return TASKWAIT
+		}
+	}
+
+	if insertedNum == 0 {
 		log.Warn("[小说更新任务] ID:", nov.Id, " 小说:", nov.Name, " provider:", source, " 获取章节列表内容失败")
 
 		return TASKWAIT
@@ -340,37 +418,17 @@ func (this *SnatchTask) upChapter(source, chapLink string) uint8 {
 
 	ct := time.Since(t1)
 
-	t2 := time.Now()
-	// 批量插入
-	err = ChapterService.InsertMulti(chaps, isInit)
-	if err != nil {
-		log.Warn("[小说更新任务] ID:", nov.Id, " 小说:", nov.Name, " provider:", source, " 批量写入章节内容失败", err)
-		return TASKWAIT
-	}
-	it := time.Since(t2)
-
-	// 获取最后一章节信息更新主信息表
-	lastChap = ChapterService.GetLast(nov.Id)
-	lastId := uint64(0)
-	lastTitle := ""
-	if lastChap != nil {
-		lastId = lastChap.Id
-		lastTitle = lastChap.Title
-	}
-	NovelService.UpChapterInfo(nov.Id, novTextNum, chapterNum, lastId, lastTitle, status)
-
-	// 最后更新章节时间
-	this.lastUpChapTime = time.Now().Unix()
-
 	log.Debug("[小说更新任务] ID:", nov.Id,
 		" 小说:", nov.Name,
 		" provider:", source,
 		" 获取到", len(chapLinks),
 		"章节 错误", errNum,
-		"章节 更新章节为:", len(links),
-		" 更新成功:", len(chaps),
-		"采集时间:", ct,
-		"db写入时间:", it)
+		"章节 本次更新:", len(links),
+		" 实际入库:", insertedNum,
+		"采集时间:", ct)
+
+	// 最后更新章节时间
+	this.lastUpChapTime = time.Now().Unix()
 
 	return TASKWAIT
 }
@@ -409,7 +467,19 @@ func (this *SnatchTaskManager) LoadNovels() int {
 func (this *SnatchTaskManager) Run() {
 	this.taskChans = make(chan *SnatchTask, 3000)
 
-	for i := 0; i < 5; i++ {
+	// 并发 worker 数量。
+	// 根据「按原文并发会绕过限速」问题：请求并发已由全局节流器统一接管
+	// （同域名串行），因此这里保持较小的 worker 数即可；
+	// 且可通过后台 SnatchWorkers 配置进一步下调。
+	workers := ConfigService.Int("SnatchWorkers", 2)
+	if workers < 1 {
+		workers = 1
+	}
+	if workers > 10 {
+		workers = 10
+	}
+
+	for i := 0; i < workers; i++ {
 		go func() {
 			for {
 				task, ok := <-this.taskChans
@@ -490,7 +560,7 @@ func (this *SnatchTaskManager) dayRun() {
 
 		go this.runCrawler()
 		go this.runRank()
-		
+
 		ticker = updateTicker() //复原定时任务
 	}
 }

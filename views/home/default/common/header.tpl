@@ -36,23 +36,27 @@
 
 	<div class="mnavbox">
 	  <ul class="mnav" style="width:1200px">
-	      <li {{if eq .aOut.MethodName "HomeController.Index"}}class="cur"{{end}}><a href="{{urlfor "home.HomeController.Index"}}">首页</a></li>
-	      <li {{if eq .aOut.MethodName "HomeController.Cate"}}class="cur"{{end}}><a href="{{urlfor "home.HomeController.Cate"}}" class="r-tab">全部作品</a></li>
+	      <li {{if eq .aOut.MethodName "HomeController.Index"}}class="cur"{{end}}><a href="/">首页</a></li>
+	      {{range .Cates}}
+	      <li class="item" id="{{.Id}}"><a href="{{urlfor "home.HomeController.Cate" "id" .Id}}">{{.Name}}</a></li>
+            {{end}}
+            
+	      <li class="item {{if eq .aOut.MethodName "HomeController.History"}}cur{{end}}"><a href="{{urlfor "home.HomeController.History"}}" class="r-tab">历史记录</a></li>
 	      <!--<li><a href="#" class="r-tab">排行</a></li>-->
-	      <li class="all-sort">
-	          <a href="{{urlfor "home.HomeController.Cate"}}" class="sort-tab">全部书籍分类</a>
-	          <div class="t-box">
-	            <span class="triangle"></span>
-	          </div>
-	          <div class="sort-box" id="allsortbox" style="display: none;">
-	              <ul>
-					{{range .Cates}}
-	          			<li><a href="{{urlfor "home.HomeController.Cate" "id" .Id}}" class="top-a">{{.Name}}</a></li>
-					{{end}}
-	              </ul>
-	          </div>
 
-	      </li>
 	  </ul>
 	</div>
+	<script>
+	function getQueryString(name) {
+    var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+    var r = decodeURI(window.location.search).substr(1).match(reg);
+    if (r != null)
+        return unescape(r[2]);
+        return null;
+    }
+    if (getQueryString("id") != null) {
+        $(".item").removeClass("cur");
+    }
+    $("#"+getQueryString("id")).addClass("cur");
+    </script>
 </div>	

@@ -115,6 +115,22 @@ func (m *Novel) Update(fields ...string) error {
 	return nil
 }
 
+// 浏览次数原子自增
+// 修复原因：原实现为「读整行 -> Views++ -> 写回」，高并发下同一行会产生
+// 锁等待，且读改写之间存在丢失更新的可能。改为单条 UPDATE views=views+1，
+// 由 InnoDB 行锁保证原子性，避免把热门小说详情页变成串行队列。
+func (m *Novel) UpViews(novId uint32) error {
+	if novId < 1 {
+		return nil
+	}
+
+	sqlStr := fmt.Sprintf("UPDATE %snovel SET views=views+1, updated_at=? WHERE id=?", TABLE_PREFIX)
+
+	_, err := orm.NewOrm().Raw(sqlStr, time.Now().Unix(), novId).Exec()
+
+	return err
+}
+
 // 批量更新推荐
 func (m *Novel) UpRecBatch(field string, books []string) error {
 	marks := make([]string, len(books))
