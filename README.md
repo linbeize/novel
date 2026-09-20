@@ -1,6 +1,7 @@
 # gonovel
-
+个人修改版
 基于beego的小说采集展示网站，演示站点：[卡丘小说](http://139.199.178.202:8089/)。
+添加了历史记录及优化导航
 
 ### 环境说明
 * Go1.9+
@@ -35,8 +36,8 @@ Go环境和MySQL请自行安装。
 
 1. 下载源码
 ```
-go get -u github.com/vckai/novel
-cd $GOPATH/src/github.com/vckai/novel
+go get -u github.com/287775856/novel
+cd $GOPATH/src/github.com/287775856/novel
 go build
 ```
 
