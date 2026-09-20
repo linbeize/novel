@@ -11,6 +11,11 @@
 
     <link rel="stylesheet" href="{{.mOut.ViewUrl}}css/style.css">
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 浏览历史记录脚本：PC 阅读页此前未加载该文件，
+         导致 /history 页面永远读不到数据（只有移动端记录）。
+         注意路径用 aOut.ViewUrl（指向 /public/），
+         因为该文件位于 static/js/ 而非主题目录 static/home/default/js/。 -->
+    <script src="{{.aOut.ViewUrl}}js/bookcase.js"></script>
     <script type="text/javascript">
         if (screen.width < 1280) {
             document.documentElement.setAttribute('class', 'screen-small');
@@ -433,6 +438,22 @@
         }
 
 
+    </script>
+
+    <!-- 记录本次阅读进度到浏览历史（存储于浏览器本地，见 bookcase.js）。
+         此前只有移动端会写入，PC 端缺失，导致 /history 一直为空。
+         参数经 js 函数转义（输出自带引号），避免书名含引号时破坏脚本。 -->
+    <script type="text/javascript">
+        if (typeof lastread !== 'undefined') {
+            lastread.set(
+                {{js .Nov.Id}},
+                {{js .Chap.Id}},
+                {{js .Nov.Name}},
+                {{js .Chap.Title}},
+                {{js .Nov.Author}},
+                {{js .Nov.CateName}}
+            );
+        }
     </script>
 
 	<!-- 本次请求的服务端耗时统计 -->

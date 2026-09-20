@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"strings"
@@ -33,6 +34,42 @@ func RegisterFuncMap() {
 
 	// 页面底部性能统计：在模板渲染到该处时输出本次请求耗时
 	beego.AddFuncMap("perf", PerfReport)
+
+	// JS 字符串安全输出：用于把书名、章节名等写入 <script> 中的字符串字面量
+	beego.AddFuncMap("js", JsQuote)
+}
+
+// JsQuote 将字符串安全地输出为 JavaScript 字符串字面量（含首尾引号）
+//
+// 场景：模板里需要把书名、章节标题等拼进 <script> 的字符串中，
+// 例如浏览历史记录 lastread.set('书名', ...)。
+// 若书名本身含有单引号（如《's 的秘密》）或换行，直接拼接会截断
+// 字符串、破坏整段脚本。
+//
+// 这里用 json.Marshal 生成转义后的字面量：它会正确处理引号、反斜杠、
+// 换行及 < > & 等字符（后者会被转义为 \u003c 等，可避免 </script> 注入）。
+// 返回内容自带双引号，因此模板中不要再手动加引号。
+func JsQuote(v interface{}) template.JS {
+	if v == nil {
+		return template.JS(`""`)
+	}
+
+	var s string
+	switch t := v.(type) {
+	case string:
+		s = t
+	case []byte:
+		s = string(t)
+	default:
+		s = fmt.Sprint(t)
+	}
+
+	b, err := json.Marshal(s)
+	if err != nil {
+		return template.JS(`""`)
+	}
+
+	return template.JS(b)
 }
 
 // 供模板调用：输出当前请求的性能统计文本

@@ -115,5 +115,15 @@
             break;
         }
     }
-    lastread.set('{{.Nov.Id}}','{{.Chap.Id}}','{{.Nov.Name}}','{{.Chap.Title}}','{{.Nov.Author}}','{{.Nov.CateName}}');
+    // 参数经 js 函数转义（输出自带引号），避免书名含引号时破坏脚本
+    if (typeof lastread !== 'undefined') {
+        lastread.set(
+            {{js .Nov.Id}},
+            {{js .Chap.Id}},
+            {{js .Nov.Name}},
+            {{js .Chap.Title}},
+            {{js .Nov.Author}},
+            {{js .Nov.CateName}}
+        );
+    }
 </script>
