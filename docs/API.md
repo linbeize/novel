@@ -350,13 +350,21 @@ GET /api/book/{id}/chapters
     "page": 1,
     "size": 2,
     "pages": 100,
+    "next_toc_url": "/api/book/1/chapters?size=100&order=asc&p=2",
     "list": [
-      { "id": 1000001, "chapter_no": 1, "title": "第一章 绯红", "text_num": 3661, "updated_at": 0 },
-      { "id": 1000002, "chapter_no": 2, "title": "第二章 情况", "text_num": 4569, "updated_at": 0 }
+      { "id": 1000001, "url": "/api/chapter/1000001?novid=1",
+        "chapter_no": 1, "title": "第一章 绯红", "text_num": 3661, "updated_at": 0 },
+      { "id": 1000002, "url": "/api/chapter/1000002?novid=1",
+        "chapter_no": 2, "title": "第二章 情况", "text_num": 4569, "updated_at": 0 }
     ]
   }
 }
 ```
+
+| 字段 | 说明 |
+|---|---|
+| `list[].url` | 该章正文接口地址，**已带 `novid`**，可直接使用 |
+| `next_toc_url` | 目录的下一页地址；为空表示已是最后一页 |
 
 > **`desc` 排序常用于「目录默认展示最新章节」**；阅读时建议用 `asc`。
 
@@ -432,6 +440,7 @@ GET /api/chapter/{id}?novid={novelId}
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `id` | int | 小说 ID |
+| `url` | string | 该书详情接口的相对地址，可直接作为 `bookUrl` 使用 |
 | `name` | string | 书名 |
 | `author` | string | 作者 |
 | `cover` | string | 封面绝对地址，可能为空 |
@@ -449,7 +458,37 @@ GET /api/chapter/{id}?novid={novelId}
 
 ## 附：Nginx 反代参考
 
-若要把 `/api` 暴露到 80/443（应用本身监听 8089）：
+应用本身监听 `8089`，需经 Nginx 暴露到 80/443。分两种情况，**先看现有配置属于哪种**：
+
+### 情况一：已全站反代（多数情况）
+
+若已有类似下段的配置，说明**所有路径**都已转发到应用，`/api` 无需再单独配置：
+
+```nginx
+location ^~ / {
+    proxy_pass http://127.0.0.1:8089;
+    proxy_set_header Host $host;                       # 建议用 $host 而非 127.0.0.1
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+可用下面的命令确认反代是否已生效：
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://<你的域名>/api/home
+# 返回 200 即已通
+```
+
+> 注意 `proxy_set_header Host`：若写成 `127.0.0.1`，应用生成的绝对地址
+> （如封面 `cover`）会退回用 Host 拼接而指向错误域名。不过本站封面取的是
+> 后台配置的 `WebURL`，只要该配置正确即不受影响。
+
+### 情况二：只反代了部分路径
+
+若现有配置只转发了特定前缀（如只转 `/book/`、`/public/`），
+则需为 `/api` 单独补一段：
 
 ```nginx
 location /api/ {
@@ -461,7 +500,7 @@ location /api/ {
 }
 ```
 
-封面等静态资源同理，需另配 `/public/`：
+封面等静态资源同理需有 `/public/` 的转发或直读：
 
 ```nginx
 location /public/ {
@@ -511,3 +550,28 @@ curl "http://novel.linbei.de/api/chapter/1000001?novid=1"
 - TXT 下载（网页端已有 `/book/{id}/download.html`，App 可直接访问该地址下载）
 
 > 书架与阅读进度可在**客户端本地**实现（本地数据库或文件），无需服务端参与。
+
+---
+
+## 附：对接 Flutter 阅读器（书源配置）
+
+若使用 [linbeize/book](https://github.com/linbeize/book)（爱看书，Legado 规则引擎）这类
+支持 **JSON 规则**的阅读器，可直接把本站当作「书源」，**无需改动阅读器代码**。
+
+配置样例见 `data/appsource/ikanshu.json`，要点如下：
+
+| 规则 | 取值 | 说明 |
+|---|---|---|
+| `bookSourceUrl` | 站点地址 | 相对路径的基准 |
+| `searchUrl` | `/api/search?kw={{key}}&size=30&p={{page}}` | 相对路径会与该基准拼接 |
+| `ruleSearch.bookList` | `$.data.list[*]` | JSONPath 取列表 |
+| `ruleSearch.bookUrl` | `$.url` | 直接用响应中的 `url` 字段 |
+| `ruleBookInfo.tocUrl` | `$.data.novel.toc_url` | 目录地址 |
+| `ruleToc.chapterUrl` | `$.url` | 已带 `novid`，可直接请求 |
+| `ruleToc.nextTocUrl` | `$.data.next_toc_url` | 目录翻页 |
+| `ruleContent.content` | `$.data.content` | 正文；阅读器会自行转纯文本 |
+| `ruleContent.nextContentUrl` | **留空** | 语义是「同一章的下一页」，本站已合并，勿填下一章地址 |
+
+> 注意 `nextContentUrl` 与 `nextTocUrl` 语义不同：
+> 前者用于合并**同一章**被拆分的多页正文，后者才是**目录翻页**。
+> 若误把下一章地址填入 `nextContentUrl`，会把后续章节内容拼进当前章。

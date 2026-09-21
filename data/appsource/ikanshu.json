@@ -1,0 +1,54 @@
+[
+  {
+    "bookSourceUrl": "http://novel.linbei.de",
+    "bookSourceName": "爱看书（自建站）",
+    "bookSourceGroup": "自建",
+    "bookSourceType": 0,
+    "enabled": true,
+    "enabledExplore": true,
+    "customOrder": 0,
+    "weight": 0,
+    "header": "",
+    "searchUrl": "/api/search?kw={{key}}&size=30&p={{page}}",
+    "exploreUrl": "",
+    "jsLib": "",
+    "ruleSearch": {
+      "bookList": "$.data.list[*]",
+      "name": "$.name",
+      "author": "$.author",
+      "kind": "$.cate_name",
+      "wordCount": "$.text_num",
+      "intro": "",
+      "lastChapter": "$.chapter_title",
+      "coverUrl": "$.cover",
+      "bookUrl": "$.url"
+    },
+    "ruleBookInfo": {
+      "init": "",
+      "name": "$.data.novel.name",
+      "author": "$.data.novel.author",
+      "kind": "$.data.novel.cate_name",
+      "wordCount": "$.data.novel.text_num",
+      "intro": "$.data.novel.desc",
+      "coverUrl": "$.data.novel.cover",
+      "lastChapter": "$.data.novel.chapter_title",
+      "tocUrl": "$.data.novel.toc_url",
+      "canReName": ""
+    },
+    "ruleToc": {
+      "chapterList": "$.data.list[*]",
+      "chapterName": "$.title",
+      "chapterUrl": "$.url",
+      "isVolume": "",
+      "updateTime": "$.updated_at",
+      "nextTocUrl": "$.data.next_toc_url"
+    },
+    "ruleContent": {
+      "content": "$.data.content",
+      "nextContentUrl": "",
+      "replaceRegex": "",
+      "sourceRegex": "",
+      "imageStyle": ""
+    }
+  }
+]

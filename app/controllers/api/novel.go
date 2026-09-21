@@ -17,6 +17,7 @@ package api
 import (
 	"html"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/astaxie/beego"
@@ -236,7 +237,10 @@ func (this *NovelController) Chapters() {
 	list := make([]map[string]interface{}, 0, len(chaps))
 	for _, c := range chaps {
 		list = append(list, map[string]interface{}{
-			"id":         c.Id,
+			"id": c.Id,
+			// url 已带上 novid：章节数据按小说号分表存储，
+			// 缺少该参数无法定位，故在此直接给出可用地址。
+			"url":        "/api/chapter/" + uitoa(c.Id) + "?novid=" + itoa(uint64(novId)),
 			"chapter_no": c.ChapterNo,
 			"title":      c.Title,
 			"text_num":   c.TextNum,
@@ -244,14 +248,25 @@ func (this *NovelController) Chapters() {
 		})
 	}
 
+	pages := this.pages(count, size)
+
+	// 目录翻页地址：书源规则（Legado 的 nextTocUrl）会据此继续取下一批章节。
+	// 注意需保留 order 参数，否则翻页后排序会回到默认值。
+	nextToc := ""
+	if page < pages {
+		nextToc = "/api/book/" + uitoa(novId) + "/chapters?size=" + uitoa(size) +
+			"&order=" + order + "&p=" + uitoa(page+1)
+	}
+
 	this.ok(map[string]interface{}{
-		"novel_id":   novId,
-		"novel_name": nov.Name,
-		"list":       list,
-		"total":      count,
-		"page":       page,
-		"size":       size,
-		"pages":      this.pages(count, size),
+		"novel_id":     novId,
+		"novel_name":   nov.Name,
+		"list":         list,
+		"total":        count,
+		"page":         page,
+		"size":         size,
+		"pages":        pages,
+		"next_toc_url": nextToc,
 	})
 }
 
@@ -298,6 +313,18 @@ func (this *NovelController) Chapter() {
 
 		data["next_id"] = nextId
 		data["pre_id"] = preId
+
+		// 直接给出可用的翻页地址，客户端无需自行拼接
+		nextURL := ""
+		if nextId > 0 {
+			nextURL = "/api/chapter/" + uitoa(nextId) + "?novid=" + itoa(uint64(chap.NovId))
+		}
+		preURL := ""
+		if preId > 0 {
+			preURL = "/api/chapter/" + uitoa(preId) + "?novid=" + itoa(uint64(chap.NovId))
+		}
+		data["next_url"] = nextURL
+		data["pre_url"] = preURL
 	}
 
 	this.ok(data)
@@ -310,7 +337,9 @@ func (this *BaseController) novelBriefList(novs []*models.Novel) []map[string]in
 	list := make([]map[string]interface{}, 0, len(novs))
 	for _, n := range novs {
 		list = append(list, map[string]interface{}{
-			"id":                 n.Id,
+			"id": n.Id,
+			// url 便于客户端直接使用（书源规则亦可直接取该字段作为 bookUrl）
+			"url":                "/api/book/" + itoa(n.Id),
 			"name":               n.Name,
 			"author":             n.Author,
 			"cover":              this.absURL(n.Cover),
@@ -331,7 +360,10 @@ func (this *BaseController) novelBriefList(novs []*models.Novel) []map[string]in
 // 书籍详细信息（详情页用）
 func (this *BaseController) novelDetail(n *models.Novel) map[string]interface{} {
 	return map[string]interface{}{
-		"id":                 n.Id,
+		"id":  n.Id,
+		"url": "/api/book/" + itoa(n.Id),
+		// toc_url：章节目录接口地址，客户端可直接用作目录页
+		"toc_url":            "/api/book/" + itoa(n.Id) + "/chapters?size=100",
 		"name":               n.Name,
 		"author":             n.Author,
 		"cover":              this.absURL(n.Cover),
@@ -366,6 +398,29 @@ func (this *BaseController) plainText(s string) string {
 	s = strings.Replace(s, "\n", " ", -1)
 
 	return strings.TrimSpace(s)
+}
+
+// 无符号整数转字符串（供拼接 URL 使用）
+//
+// 接受任意无符号整型：项目中小说 ID 为 uint32、章节 ID 为 uint64，
+// 用一个函数统一处理，避免调用处到处做类型转换。
+func uitoa(v interface{}) string {
+	switch x := v.(type) {
+	case uint32:
+		return strconv.FormatUint(uint64(x), 10)
+	case uint64:
+		return strconv.FormatUint(x, 10)
+	case int:
+		return strconv.Itoa(x)
+	case int64:
+		return strconv.FormatInt(x, 10)
+	}
+	return ""
+}
+
+// 同上，语义化别名（书源规则与客户端拼接 URL 时更直观）
+func itoa(v interface{}) string {
+	return uitoa(v)
 }
 
 // 计算总页数
