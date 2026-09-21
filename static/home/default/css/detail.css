@@ -152,7 +152,10 @@
   .detail-btn-wrap {
     overflow: hidden;
     margin-top: 18px; }
-    .detail-btn-wrap .btn-read, .detail-btn-wrap .btn-keep {
+    /* btn-download 与 btn-read/btn-keep 共用同一套按钮尺寸与边框，
+       仅配色不同；若不并入此规则，下载按钮会因缺少 width/height/
+       border-style 而退化成纯文字链接。 */
+    .detail-btn-wrap .btn-read, .detail-btn-wrap .btn-keep, .detail-btn-wrap .btn-download {
       float: left;
       margin-right: 20px;
       border-width: 1px;
@@ -163,7 +166,7 @@
       width: 124px;
       height: 38px;
       line-height: 38px; }
-      .detail-btn-wrap .btn-read:hover, .detail-btn-wrap .btn-keep:hover {
+      .detail-btn-wrap .btn-read:hover, .detail-btn-wrap .btn-keep:hover, .detail-btn-wrap .btn-download:hover {
         background-color: #de3624;
         border-color: #de3624;
         color: #fff; }
@@ -174,15 +177,15 @@
     .detail-btn-wrap .btn-keep {
       border-color: #e74635;
       color: #e74635; }
-    /* 下载按钮：沿用同一套按钮尺寸，配色中性，避免与主操作抢焦点 */
+    /* 下载按钮：中性配色，不与主操作抢焦点 */
     .detail-btn-wrap .btn-download {
       border-color: #999;
-      color: #666; }
-    .detail-btn-wrap .btn-download:hover {
-      border-color: #e74635;
-      color: #e74635; }
+      color: #666;
+      background-color: #fff; }
+    /* 无章节时的禁用态：整体变灰且不可点击 */
     .detail-btn-wrap .btn-disabled,
     .detail-btn-wrap .btn-disabled:hover {
+      background-color: #f7f7f7;
       border-color: #ddd;
       color: #bbb;
       cursor: not-allowed; }

@@ -25,6 +25,12 @@ type BookController struct {
 	BaseController
 }
 
+// 目录每页显示多少章
+//
+// 《地球人实在太凶猛了》这类长篇有近 2000 章，若一次性渲染，详情页会达到
+// 500KB 以上（实测 519KB / 0.25s）。分页后单页体积与渲染耗时都大幅下降。
+const CATALOG_PAGE_SIZE = 100
+
 // 首页
 func (this *BookController) Index() {
 	id, _ := this.GetUint32("id")
@@ -38,13 +44,43 @@ func (this *BookController) Index() {
 		this.Msg("该小说不存在或者已被删除")
 	}
 
-	// 获取章节列表
-	chaps, _ := services.ChapterService.GetNovChaps(novel.Id, 10000, 0, "asc", false)
+	// 目录分页：第几页
+	page, _ := this.GetInt("p", 1)
+	if page < 1 {
+		page = 1
+	}
 
-	// 第一章节ID
+	// 该小说章节总数（用于分页器与首章定位）
+	total := int(novel.ChapterNum)
+	if total < 0 {
+		total = 0
+	}
+
+	// 页码越界时收敛到最后一页，避免出现空白目录
+	maxPage := 1
+	if total > 0 {
+		maxPage = (total + CATALOG_PAGE_SIZE - 1) / CATALOG_PAGE_SIZE
+	}
+	if page > maxPage {
+		page = maxPage
+	}
+
+	// 按页取章节列表
+	offset := (page - 1) * CATALOG_PAGE_SIZE
+	chaps, _ := services.ChapterService.GetNovChaps(novel.Id, CATALOG_PAGE_SIZE, offset, "asc", false)
+
+	// 目录分页器
+	// 复用站内 Paginator：它基于当前 RequestURI 拼接地址，
+	// 因此伪静态地址 /book/1.html 会自然得到 /book/1.html?p=2
+	this.SetPaginator(CATALOG_PAGE_SIZE, int64(total))
+	this.Data["CatalogPage"] = page
+	this.Data["CatalogTotalPage"] = maxPage
+
+	// 第一章节ID（用于「开始阅读」，需取整本的第一章，而非当前页首章）
 	firstChapId := 0
-	if len(chaps) > 0 {
-		firstChapId = int(chaps[0].Id)
+	firstChap := services.ChapterService.GetFirst(novel.Id)
+	if firstChap != nil && firstChap.Id > 0 {
+		firstChapId = int(firstChap.Id)
 	}
 	this.Data["FirstChapId"] = firstChapId
 

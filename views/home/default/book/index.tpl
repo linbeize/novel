@@ -103,7 +103,13 @@
 	    </div>
 
 	    <!-- //aside -->
-	    <h2 class="section-tit">目录</h2>
+	    <h2 class="section-tit">目录
+	      {{if gt .CatalogTotalPage 1}}
+	      <em style="font-size:14px;font-weight:normal;color:#999;margin-left:8px;">
+	        第 {{.CatalogPage}}/{{.CatalogTotalPage}} 页（共 {{.Nov.ChapterNum}} 章）
+	      </em>
+	      {{end}}
+	    </h2>
 	    <div class="contents-lst-wrap">
 	      <ol class="contents-lst" id="contl1">
 		  {{range .Chaps}}
@@ -114,6 +120,9 @@
 	      	</li>
 		  {{end}}
 	      </ol>
+	      <!-- 目录分页：长篇（近 2000 章）一次渲染会使页面达 500KB 以上，
+	           故每页 100 章。页面地址沿用当前的伪静态地址 + ?p=N -->
+	      {{template "home/default/common/page.tpl" .}}
 	    </div>
 	  </div>
 	  <!-- //section -->
