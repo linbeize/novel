@@ -79,6 +79,17 @@ func prettyRouters() {
 		beego.NSRouter("/cate/:id([0-9]+)/p:page([0-9]+).html", &m.BookController{}, "GET:List"),
 		beego.NSRouter("/cate/:id([0-9]+)/p:page([0-9]+)/:status([0-9]+)_:textnum([0-9]+)_:uptime([0-9]+)_:ot([0-9]+).html",
 			&m.BookController{}, "GET:List"),
+		// 分类总览（不带具体分类）
+		beego.NSRouter("/cate", &m.BookController{}, "GET:List"),
+
+		// 移动端的几个列表页与历史、反馈。
+		// 这些页面此前只能通过 beego 自动路由访问（/m/book/new 等），
+		// 现统一为更短的地址；旧地址依然可用。
+		beego.NSRouter("/new", &m.BookController{}, "GET:New"),
+		beego.NSRouter("/end", &m.BookController{}, "GET:End"),
+		beego.NSRouter("/rank", &m.BookController{}, "GET:Rank"),
+		beego.NSRouter("/history", &m.HomeController{}, "GET:History"),
+		beego.NSRouter("/feedback", &m.HomeController{}, "GET:Feedback"),
 	)
 	beego.AddNamespace(mPretty)
 

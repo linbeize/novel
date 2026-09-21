@@ -191,10 +191,26 @@ func CatePrefix(mobile bool) string {
 
 // 将旧式地址改写为伪静态地址
 //
-// 覆盖 PC 与移动端的：小说详情、章节阅读、分类页。
+// 覆盖 PC 与移动端的：首页、小说详情、章节阅读、分类页、历史记录。
 // 其它控制器（搜索、排行、Ajax 接口等）保持原样。
 func PrettyURL(endpoint, url string) string {
 	switch endpoint {
+	// 首页：beego 的原生形态是 /home/index，统一收敛为站点根 /
+	case "home.HomeController.Index":
+		return "/"
+	case "m.HomeController.Index":
+		return "/m"
+
+	// 历史记录
+	case "home.HomeController.History":
+		return "/history"
+	case "m.HomeController.History":
+		return "/m/history"
+
+	// 反馈（仅移动端有）
+	case "m.HomeController.Feedback":
+		return "/m/feedback"
+
 	case "home.BookController.Index":
 		return buildPrettyURL("", "Index", url)
 	case "home.BookController.Detail":
@@ -208,10 +224,24 @@ func PrettyURL(endpoint, url string) string {
 	case "m.BookController.Download":
 		return buildPrettyURL("/m", "Download", url)
 
+	// 移动端其它列表页
+	case "m.BookController.New":
+		return "/m/new"
+	case "m.BookController.End":
+		return "/m/end"
+	case "m.BookController.Rank":
+		return "/m/rank"
+	// 分类总览（未指定具体分类时）。
+	// 带 cate_id 的情况走下面的 buildPrettyCateFromQuery，生成 /m/cate/1.html；
+	// 不带参数时若保持原地址会输出 /m/book/list，故收敛为 /m/cate。
+	case "m.BookController.List":
+		if atoiDefault(queryValue(url, "cate_id"), 0) < 1 {
+			return "/m/cate"
+		}
+		return buildPrettyCateFromQuery("/m", url)
+
 	case "home.HomeController.Cate":
 		return buildPrettyCateFromQuery("", url)
-	case "m.BookController.List":
-		return buildPrettyCateFromQuery("/m", url)
 	}
 
 	return url

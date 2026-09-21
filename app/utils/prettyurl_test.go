@@ -20,7 +20,25 @@ func TestPrettyURL(t *testing.T) {
 
 		// 不相关的方法不改写
 		{"home.BookController.AjaxRank", "/book/ajaxrank", "/book/ajaxrank"},
-		{"home.HomeController.Index", "/home/index", "/home/index"},
+
+		// 首页：beego 原生形态 /home/index 收敛为站点根，
+		// 避免页面上出现 /home/index 这类不统一的地址
+		{"home.HomeController.Index", "/home/index", "/"},
+		{"m.HomeController.Index", "/m/home/index", "/m"},
+
+		// 历史记录与反馈
+		{"home.HomeController.History", "/home/history", "/history"},
+		{"m.HomeController.History", "/m/home/history", "/m/history"},
+		{"m.HomeController.Feedback", "/m/home/feedback", "/m/feedback"},
+
+		// 移动端列表页
+		{"m.BookController.New", "/m/book/new", "/m/new"},
+		{"m.BookController.End", "/m/book/end", "/m/end"},
+		{"m.BookController.Rank", "/m/book/rank", "/m/rank"},
+		// 分类总览（无 cate_id）收敛为 /m/cate；
+		// 带 cate_id 时仍生成 /m/cate/1.html
+		{"m.BookController.List", "/m/book/list", "/m/cate"},
+		{"m.BookController.List", "/m/book/list?cate_id=1", "/m/cate/1.html"},
 
 		// 移动端小说详情：/m/book/index?id=1 -> /m/book/1.html
 		{"m.BookController.Index", "/m/book/index?id=1", "/m/book/1.html"},
