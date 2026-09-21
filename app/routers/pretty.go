@@ -52,6 +52,13 @@ func prettyRouters() {
 	// 放在详情路由之后注册，避免与 :id 规则互相遮蔽。
 	beego.Router("/book/:id([0-9]+)/download.html", &home.BookController{}, "GET:Download")
 
+	// PC 前台：详情页「目录分页」
+	//   /book/1.html       第 1 页
+	//   /book/1/p3.html    第 3 页
+	// 同样注册在详情路由之后，两个规则的第二段分别是 p3.html 与 download.html，
+	// 与 :id([0-9]+) 形态不同，不会互相遮蔽。
+	beego.Router("/book/:id([0-9]+)/p:page([0-9]+).html", &home.BookController{}, "GET:Index")
+
 	// PC 前台：分类页
 	//   /cate/1.html                          第 1 页、无筛选
 	//   /cate/1/p2.html                       第 2 页、无筛选

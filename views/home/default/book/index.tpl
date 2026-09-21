@@ -1,5 +1,8 @@
 
 <link href="{{.aOut.ViewUrl}}plugin/swiper8/swiper-bundle.min.css" rel="stylesheet" type="text/css">
+<!-- 目录分页样式位于 cate.css 的 .page-box 作用域（与分类页共用），
+     详情页此前未加载该文件，导致分页器无样式 -->
+<link href="{{.mOut.ViewUrl}}css/cate.css" rel="stylesheet" type="text/css">
 <script type="text/javascript" src="{{.aOut.ViewUrl}}plugin/swiper8/swiper-bundle.min.js" charset="utf-8"></script>
 
 <!-- container -->
@@ -121,8 +124,12 @@
 		  {{end}}
 	      </ol>
 	      <!-- 目录分页：长篇（近 2000 章）一次渲染会使页面达 500KB 以上，
-	           故每页 100 章。页面地址沿用当前的伪静态地址 + ?p=N -->
-	      {{template "home/default/common/page.tpl" .}}
+	           故每页 100 章，地址形如 /book/805/p3.html。
+	           分页样式定义在 cate.css 的 .page-box 作用域内（与分类页共用），
+	           因此这里必须用 .page-box 包裹，并确保 detail.css 已加载。 -->
+	      <div class="page-box cf">
+	         {{template "home/default/common/page.tpl" .}}
+	      </div>
 	    </div>
 	  </div>
 	  <!-- //section -->

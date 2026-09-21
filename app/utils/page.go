@@ -37,6 +37,23 @@ type Paginator struct {
 	URLBuilder func(page int) string
 }
 
+// SetPage 显式指定当前页码
+//
+// 默认情况下 Page() 只从 query 的 p 参数取值，这对 ?p=3 形式有效；
+// 但伪静态地址把页码放在路径里（如 /book/805/p3.html），
+// query 中并无 p，会导致分页器始终认为停在第 1 页——页码高亮错误，
+// 且 HasPrev/HasNext 判断也随之出错。
+// 因此使用伪静态分页时，调用方需把已从路由解析出的页码通过本方法传入。
+func (p *Paginator) SetPage(page int) {
+	if page < 1 {
+		page = 1
+	}
+	if nums := p.PageNums(); page > nums {
+		page = nums
+	}
+	p.page = page
+}
+
 func (p *Paginator) PageNums() int {
 	if p.pageNums != 0 {
 		return p.pageNums

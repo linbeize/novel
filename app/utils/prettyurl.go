@@ -97,6 +97,30 @@ const (
 	prettyCateDefaultOt = 1 // 默认排序：人气
 )
 
+// 生成小说详情页「目录分页」的伪静态地址
+//
+// 形式：
+//
+//	/book/805.html          第 1 页
+//	/book/805/p3.html       第 3 页
+//
+// 之所以不放在 /book/{id}.html 后面加查询串（?p=3），是为了与其他
+// 伪静态地址风格统一。
+// 注意第 1 页保持不带分页段的短地址，便于作为规范链接。
+func PrettyBookCatalogURL(prefix string, novId, page int) string {
+	if novId < 1 {
+		return prefix + "/book/"
+	}
+
+	base := prefix + "/book/" + itoa(novId)
+
+	if page <= 1 {
+		return base + ".html"
+	}
+
+	return base + "/p" + itoa(page) + ".html"
+}
+
 // 生成分类页地址
 // prefix: "" 或 "/m"；cateId: 分类；page: 页码；其余为筛选值
 func PrettyCateURL(prefix string, cateId, page, status, textNum, upTime, ot int) string {

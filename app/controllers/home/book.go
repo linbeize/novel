@@ -19,6 +19,7 @@ import (
 
 	"github.com/vckai/novel/app/models"
 	"github.com/vckai/novel/app/services"
+	"github.com/vckai/novel/app/utils"
 )
 
 type BookController struct {
@@ -70,9 +71,16 @@ func (this *BookController) Index() {
 	chaps, _ := services.ChapterService.GetNovChaps(novel.Id, CATALOG_PAGE_SIZE, offset, "asc", false)
 
 	// 目录分页器
-	// 复用站内 Paginator：它基于当前 RequestURI 拼接地址，
-	// 因此伪静态地址 /book/1.html 会自然得到 /book/1.html?p=2
-	this.SetPaginator(CATALOG_PAGE_SIZE, int64(total))
+	// 注入伪静态地址生成器，使分页链接输出 /book/805/p3.html 形式
+	// （而非 /book/805.html?p=3），与站内其它伪静态地址保持一致。
+	// 同时用 SetPage 显式告知当前页码：伪静态把页码放在路径中，
+	// 分页器默认只读 query 的 p，不设置会导致高亮与前后页判断错误。
+	pager := this.SetPaginator(CATALOG_PAGE_SIZE, int64(total))
+	pager.SetPage(page)
+	novId := novel.Id
+	pager.URLBuilder = func(pg int) string {
+		return utils.PrettyBookCatalogURL("", int(novId), pg)
+	}
 	this.Data["CatalogPage"] = page
 	this.Data["CatalogTotalPage"] = maxPage
 
