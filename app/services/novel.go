@@ -458,7 +458,7 @@ func (this *Novel) GetList(size, offset int, qs map[string]interface{}) ([]*mode
 		args.FilterMaps["status"] = status.(int)
 	}
 
-	args.Fields = []string{"id", "name", "cover", "desc", "author", "cate_id", "cate_name", "text_num", "status", "cate_id", "chapter_title"}
+	args.Fields = []string{"id", "name", "cover", "desc", "author", "cate_id", "cate_name", "text_num", "status", "chapter_num", "chapter_title", "chapter_updated_at"}
 
 	novs, count := this.GetAll(args)
 

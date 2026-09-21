@@ -49,6 +49,9 @@ func init() {
 	// H5网站
 	mRouters()
 
+	// 只读 API（供 App 对接）
+	apiRouters()
+
 	// 管理后台
 	adminRouters()
 }

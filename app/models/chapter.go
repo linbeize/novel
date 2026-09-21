@@ -224,7 +224,7 @@ func (m *Chapter) GetChapsTextNum(ids []string) int64 {
 func (m *Chapter) GetNovChaps(size, offset int, sort string) []*Chapter {
 	list := make([]*Chapter, 0)
 
-	m.newOrm().Raw(fmt.Sprintf("SELECT id, nov_id, title, views, status, try_views, chapter_no, created_at FROM %s WHERE nov_id=? ORDER BY chapter_no %s LIMIT ? OFFSET ?", m.getTable(), sort), m.NovId, size, offset).QueryRows(&list)
+	m.newOrm().Raw(fmt.Sprintf("SELECT id, nov_id, title, views, status, try_views, chapter_no, text_num, created_at FROM %s WHERE nov_id=? ORDER BY chapter_no %s LIMIT ? OFFSET ?", m.getTable(), sort), m.NovId, size, offset).QueryRows(&list)
 
 	return list
 }
