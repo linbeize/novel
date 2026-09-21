@@ -251,6 +251,31 @@
 .contents-lst-wrap {
   overflow: hidden; }
 
+/* 目录分页器
+ *
+ * 分页模板 page.tpl 的根元素带 .fr（float:right），那是为分类页这类
+ * 整幅宽度的列表准备的；放到详情页会贴着目录区右缘，与左侧目录明显不齐。
+ * 这里覆盖为居中，并清掉 cate.css 带来的 40px 上下内边距（对目录区过大）。
+ *
+ * 关键：.contents-lst 是 float:left 且宽 900px，其右侧只剩约 269px（侧栏宽度），
+ * 若分页器不 clear，会尝试挤进那点剩余空间而被压成不可见。
+ * 故必须 clear:both 让它落到目录列表下方。
+ *
+ * 选择器写成「.contents-lst-wrap .page-box ...」三层：
+ * cate.css 在 detail.css 之后加载，若特异性相同会被其覆盖。 */
+.contents-lst-wrap .page-box {
+  clear: both;
+  float: none;
+  padding: 24px 0 4px; }
+
+.contents-lst-wrap .page-box .pagination.fr {
+  float: none;
+  text-align: center; }
+
+.contents-lst-wrap .page-box .pagination ul {
+  float: none;
+  display: inline-block; }
+
 .contents-lst {
   float: left;
   margin-top: 18px;
