@@ -99,15 +99,37 @@
 		}
 
 		// reset=true 重新拉取全部；false 时只拉增量
+		//
+		// 注意：本函数内的 $ 依赖调用方传入（后台的 $ 需由 layui.jquery 赋值），
+		// 故不使用全局 $.getJSON，而用 XMLHttpRequest，
+		// 避免在 layui.use 之外引用未定义的 $。
 		function load(reset) {
 			var level = document.getElementById('level').value;
 			var url = '{{urlfor "admin.LogController.List"}}?level=' + encodeURIComponent(level)
 				+ '&limit=500&afterSeq=' + (reset ? 0 : lastSeq);
 
-			$.getJSON(url, function(res) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', url, true);
+			xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+			xhr.onreadystatechange = function() {
+				if (xhr.readyState !== 4) {
+					return;
+				}
+				if (xhr.status !== 200) {
+					return;
+				}
+
+				var res;
+				try {
+					res = JSON.parse(xhr.responseText);
+				} catch (e) {
+					return;
+				}
+
 				if (res.ret !== 0) {
 					return;
 				}
+
 				var data = res.data || {};
 				var entries = data.entries || [];
 
@@ -122,11 +144,13 @@
 				if (!isNaN(seq) && seq > lastSeq) {
 					lastSeq = seq;
 				}
-			});
+			};
+			xhr.send();
 		}
 
 		layui.use(['form', 'layer'], function() {
 			var form = layui.form, layer = layui.layer;
+			$ = layui.jquery;
 
 			// 切换级别后重新拉取
 			form.on('select(level)', function() {
