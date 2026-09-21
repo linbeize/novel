@@ -6,6 +6,7 @@
     "state": 1,
     "is_update": 1,
     "charset": "UTF-8",
+    "_note": "book_chapter_url_selector 用于定位「目录页」地址，采集点 ChapterLink 存的就是它。该站没有独立目录页，目录直接渲染在书籍页上，故留空——留空时采集点取书籍页本身，再由 chapter_page_url_template 翻页取全目录。若误填为章节链接选择器(如 a.list_item)，采集点会被存成第一章地址，采集器把它当目录页请求，那里没有目录，整本书将 0 章节。",
     "cate_maps": [
       { "id": 1, "name": "玄幻奇幻" },
       { "id": 2, "name": "修真武侠" },
@@ -39,8 +40,8 @@
       "book_cover_attr": "src",
       "book_no_cover": "nocover",
 
-      "book_chapter_url_selector": "a.list_item",
-      "book_chapter_url_attr": "href",
+      "book_chapter_url_selector": "",
+      "book_chapter_url_attr": "",
       "book_last_chapter_title_selector": "p.last a",
       "book_last_chapter_title_attr": "",
 
