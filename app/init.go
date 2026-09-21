@@ -38,6 +38,18 @@ func init() {
 	// 注册模板函数
 	utils.RegisterFuncMap()
 
+	// 控制台/日志文件的输出级别。
+	//
+	// beego 默认输出到 Debug 级，而采集过程会逐条记录「获取章节 xxx 使用时间」
+	// 这类明细，长时间运行时日志量很大（systemd journal 会迅速膨胀）。
+	// 故这里默认只在 dev 或显式配置 logLevel=debug 时才输出 Debug；
+	// 注意内存缓冲不受影响——后台「运行日志」页面始终能看到 Debug 记录。
+	if beego.BConfig.RunMode != "dev" {
+		if services.ConfigService.String("LogLevel") != "debug" {
+			beego.SetLevel(beego.LevelInformational)
+		}
+	}
+
 	// 接入 ORM 日志用于 SQL 统计。
 	//
 	// 注意：本站配置存于数据库 nov_config 表，须用 services.ConfigService 读取，
