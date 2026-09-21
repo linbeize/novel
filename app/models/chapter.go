@@ -238,6 +238,28 @@ func (m *Chapter) Count() int64 {
 	return total
 }
 
+// 分批获取含正文的章节列表（用于导出下载）
+//
+// 与 GetNovChaps 的区别：此处会取出 desc（正文），因此单行数据可能达数十 KB。
+// 为避免一次性载入整本书（最长可达 700 余万字）导致内存膨胀，
+// 调用方应按 afterNo 递增分批获取，处理完一批再取下一批。
+//
+// afterNo: 仅返回 chapter_no 大于该值的章节（首次传 0）
+// limit:   本批最多返回条数
+func (m *Chapter) GetNovChapsWithContent(afterNo uint32, limit int) []*Chapter {
+	list := make([]*Chapter, 0)
+	if limit < 1 {
+		limit = 200
+	}
+
+	m.newOrm().Raw(
+		fmt.Sprintf("SELECT id, nov_id, title, `desc`, chapter_no, status FROM %s WHERE nov_id=? AND chapter_no>? ORDER BY chapter_no ASC LIMIT ?", m.getTable()),
+		m.NovId, afterNo, limit,
+	).QueryRows(&list)
+
+	return list
+}
+
 // 获取小说第一章节
 func (m *Chapter) GetFirst() error {
 	err := m.newOrm().Raw(fmt.Sprintf("SELECT id, title, link, chapter_no FROM %s WHERE nov_id=? ORDER BY chapter_no ASC", m.getTable()), m.NovId).QueryRow(m)

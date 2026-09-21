@@ -262,3 +262,12 @@ func (this *BookController) AjaxNovels() {
 	}
 	this.OutJson(0, "", res)
 }
+
+// Download 下载整本小说为 TXT 文件（移动端）
+//
+// 路由：GET /m/book/{id}/download.html
+// 导出逻辑与 PC 端共用 controllers.BaseController.DownloadNovel。
+func (this *BookController) Download() {
+	id, _ := this.GetUint32("id")
+	this.DownloadNovel(id)
+}

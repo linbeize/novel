@@ -197,3 +197,13 @@ func (this *BookController) AjaxRank() {
 	}
 	this.OutJson(0, "", res)
 }
+
+// Download 下载整本小说为 TXT 文件
+//
+// 路由：GET /book/{id}/download.html（兼容 /book/download?id={id}）
+// 具体导出逻辑在 controllers.BaseController.DownloadNovel 中，
+// 由 PC 与移动端共用。
+func (this *BookController) Download() {
+	id, _ := this.GetUint32("id")
+	this.DownloadNovel(id)
+}

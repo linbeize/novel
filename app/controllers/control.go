@@ -15,13 +15,18 @@
 package controllers
 
 import (
+	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/astaxie/beego"
 	"github.com/beego/i18n"
 
 	"github.com/vckai/novel/app/services"
 	"github.com/vckai/novel/app/utils"
+	"github.com/vckai/novel/app/utils/log"
 )
 
 // 控制器基类
@@ -90,6 +95,91 @@ func (this *BaseController) SetPaginator(per int, nums int64) *utils.Paginator {
 	p := utils.NewPaginator(this.Ctx.Request, per, nums)
 	this.Data["Paginator"] = p
 	return p
+}
+
+// DownloadNovel 将指定小说导出为 TXT 并作为附件下载
+//
+// PC 与移动端共用此方法（两端路由分别指向各自控制器的 Download，
+// 内部均调用本方法），避免重复实现。
+//
+// 采用「边读库边写响应」的流式方式，不把整本书载入内存
+// （最长的小说约 750 万字，一次性载入会带来明显的内存峰值）。
+// 成功时不返回错误，仅以日志记录导出量。
+func (this *BaseController) DownloadNovel(novId uint32) {
+	if novId < 1 {
+		this.Msg("参数错误，无法访问")
+	}
+
+	novel := services.NovelService.Get(novId)
+	if novel == nil {
+		this.Msg("该小说不存在或者已被删除")
+	}
+
+	if novel.ChapterNum < 1 {
+		this.Msg("该小说暂无章节，无法下载")
+	}
+
+	// 文件名：书名（作者）.txt
+	fileName := novel.Name
+	if len(novel.Author) > 0 {
+		fileName += "（" + novel.Author + "）"
+	}
+	fileName = sanitizeFileName(fileName) + ".txt"
+
+	// 中文文件名兼容：filename 给 ASCII 兜底，filename* 给 UTF-8
+	asciiName := "novel-" + strconv.FormatUint(uint64(novel.Id), 10) + ".txt"
+	disposition := fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`,
+		asciiName, url.PathEscape(fileName))
+
+	this.Ctx.Output.Header("Content-Type", "text/plain; charset=utf-8")
+	this.Ctx.Output.Header("Content-Disposition", disposition)
+	// 内容随章节更新而变化，不做长缓存
+	this.Ctx.Output.Header("Cache-Control", "no-cache")
+
+	chapNum, textNum, err := services.ChapterService.ExportNovel(
+		novel.Id, novel.Name, novel.Author, this.Ctx.ResponseWriter)
+
+	if err != nil {
+		// 响应头已发出，无法再返回错误页，仅记录日志
+		log.Error("导出小说失败：", novel.Name, " 已导出 ", chapNum, " 章，错误：", err.Error())
+		return
+	}
+
+	log.Info("导出小说：", novel.Name, " 章节数：", chapNum, " 字数：", textNum)
+
+	// 已直接写入响应，阻止 beego 再渲染模板
+	this.StopRun()
+}
+
+// sanitizeFileName 去除文件名中的非法字符
+//
+// 避免书名含 / \ : * ? " < > | 等字符时导致下载文件名异常，
+// 或出现路径穿越风险；同时规避 Windows 下不允许的首尾点与空格。
+func sanitizeFileName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "novel"
+	}
+
+	invalid := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|", "\r", "\n", "\t"}
+	for _, ch := range invalid {
+		name = strings.Replace(name, ch, "_", -1)
+	}
+
+	// 去掉首尾的点与空格（Windows 下不合法）
+	name = strings.Trim(name, ". ")
+
+	// 限制长度，避免超出文件系统限制
+	if utf8.RuneCountInString(name) > 80 {
+		r := []rune(name)
+		name = string(r[:80])
+	}
+
+	if name == "" {
+		return "novel"
+	}
+
+	return name
 }
 
 type JSONResponse struct {

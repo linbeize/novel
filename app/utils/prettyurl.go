@@ -72,6 +72,11 @@ func buildPrettyURL(prefix, endpoint, url string) string {
 		if novid != "" && id != "" {
 			return prefix + "/book/" + novid + "/" + id + ".html"
 		}
+	case "Download":
+		// 整本下载：?id=N
+		if id := queryValue(url, "id"); id != "" {
+			return prefix + "/book/" + id + "/download.html"
+		}
 	}
 
 	return url
@@ -170,10 +175,14 @@ func PrettyURL(endpoint, url string) string {
 		return buildPrettyURL("", "Index", url)
 	case "home.BookController.Detail":
 		return buildPrettyURL("", "Detail", url)
+	case "home.BookController.Download":
+		return buildPrettyURL("", "Download", url)
 	case "m.BookController.Index":
 		return buildPrettyURL("/m", "Index", url)
 	case "m.BookController.Detail":
 		return buildPrettyURL("/m", "Detail", url)
+	case "m.BookController.Download":
+		return buildPrettyURL("/m", "Download", url)
 
 	case "home.HomeController.Cate":
 		return buildPrettyCateFromQuery("", url)

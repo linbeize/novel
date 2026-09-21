@@ -16,10 +16,13 @@ package services
 
 import (
 	"errors"
+	"io"
 	"math"
+	"strings"
 	"time"
 	"unicode/utf8"
 
+	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/validation"
 
 	"github.com/vckai/novel/app/models"
@@ -303,4 +306,142 @@ func (this *Chapter) InsertMulti(chapters []*models.Chapter, isInit bool) error 
 	}
 
 	return nil
+}
+
+// 导出用的批次大小：每批读取的章节数
+//
+// 取 200 是折中：单批正文约 0.7MB 量级，既不会让内存占用过高，
+// 也不会因批次过小而频繁查询数据库。
+const exportBatchSize = 200
+
+// ExportNovel 将整本小说导出为纯文本写入 w
+//
+// 设计要点：
+//   - 分批读取（每批 exportBatchSize 章），处理完即释放，避免整本载入内存
+//     （最长的小说约 750 万字，一次性载入会占用明显内存）
+//   - 正文原为 HTML 片段，这里用 beego.HTML2str 转为纯文本，
+//     并把 <br> 还原为换行，保证 TXT 排版可读
+//   - 跳过采集失败的空章节，避免导出中出现大片空白
+//
+// 返回实际写入的章节数与字数（以中文字符计）。
+func (this *Chapter) ExportNovel(novId uint32, novelName, author string, w io.Writer) (int, int, error) {
+	if novId < 1 {
+		return 0, 0, errors.New("小说不存在")
+	}
+
+	// 写头部信息
+	var head strings.Builder
+	head.WriteString(novelName)
+	head.WriteString("\r\n")
+	if len(author) > 0 {
+		head.WriteString("作者：")
+		head.WriteString(author)
+		head.WriteString("\r\n")
+	}
+	head.WriteString("------------------------------------------------------------\r\n\r\n")
+
+	if _, err := io.WriteString(w, head.String()); err != nil {
+		return 0, 0, err
+	}
+
+	m := models.NewChapter()
+	m.NovId = novId
+
+	chapNum := 0
+	textNum := 0
+	afterNo := uint32(0)
+
+	for {
+		batch := m.GetNovChapsWithContent(afterNo, exportBatchSize)
+		if len(batch) == 0 {
+			break
+		}
+
+		for _, chap := range batch {
+			afterNo = chap.ChapterNo
+
+			title := strings.TrimSpace(chap.Title)
+			body := htmlToText(chap.Desc)
+
+			// 空章节（采集失败）跳过，仅保留标题占位
+			if len(strings.TrimSpace(body)) == 0 {
+				continue
+			}
+
+			var sb strings.Builder
+			sb.WriteString(title)
+			sb.WriteString("\r\n\r\n")
+			sb.WriteString(body)
+			sb.WriteString("\r\n\r\n")
+
+			if _, err := io.WriteString(w, sb.String()); err != nil {
+				return chapNum, textNum, err
+			}
+
+			chapNum++
+			textNum += utf8.RuneCountInString(body)
+		}
+
+		// 本批不足一批，说明已到末尾
+		if len(batch) < exportBatchSize {
+			break
+		}
+	}
+
+	return chapNum, textNum, nil
+}
+
+// htmlToText 把章节正文（HTML 片段）转为纯文本
+//
+// 采集到的正文形如：
+//
+//	<br/>&nbsp;&nbsp;正文第一段<br/><br/>&nbsp;&nbsp;正文第二段
+//
+// 处理步骤：
+//  1. <br> / <br/> / </p> 等换行标记替换为 \n
+//  2. 去除其余 HTML 标签
+//  3. 反转义实体（&nbsp; &amp; 等）
+//  4. 规范空白：去掉首尾空白、压缩连续空行为单个空行
+func htmlToText(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+
+	// 1. 换行标记
+	replacer := strings.NewReplacer(
+		"<br/>", "\n",
+		"<br />", "\n",
+		"<br>", "\n",
+		"</p>", "\n",
+		"</div>", "\n",
+	)
+	s = replacer.Replace(s)
+
+	// 2. 去标签 + 3. 反转义
+	s = beego.HTML2str(s)
+
+	// 4. 规范化空白
+	s = strings.Replace(s, "\u00a0", " ", -1)
+	s = strings.Replace(s, "\r\n", "\n", -1)
+	s = strings.Replace(s, "\r", "\n", -1)
+
+	lines := strings.Split(s, "\n")
+	out := make([]string, 0, len(lines))
+	blank := 0
+	for _, ln := range lines {
+		ln = strings.TrimSpace(ln)
+		if ln == "" {
+			blank++
+			// 连续空行压缩为一个
+			if blank > 1 {
+				continue
+			}
+			out = append(out, "")
+			continue
+		}
+		blank = 0
+		out = append(out, ln)
+	}
+
+	return strings.TrimSpace(strings.Join(out, "\n"))
 }

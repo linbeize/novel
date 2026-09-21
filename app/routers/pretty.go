@@ -47,6 +47,11 @@ func prettyRouters() {
 	beego.Router("/book/:id([0-9]+).html", &home.BookController{}, "GET:Index")
 	beego.Router("/book/:novid([0-9]+)/:id([0-9]+).html", &home.BookController{}, "GET:Detail")
 
+	// PC 前台：整本小说下载
+	//   /book/1/download.html
+	// 放在详情路由之后注册，避免与 :id 规则互相遮蔽。
+	beego.Router("/book/:id([0-9]+)/download.html", &home.BookController{}, "GET:Download")
+
 	// PC 前台：分类页
 	//   /cate/1.html                          第 1 页、无筛选
 	//   /cate/1/p2.html                       第 2 页、无筛选
@@ -61,6 +66,7 @@ func prettyRouters() {
 	mPretty := beego.NewNamespace("/m",
 		beego.NSRouter("/book/:id([0-9]+).html", &m.BookController{}, "GET:Index"),
 		beego.NSRouter("/book/:novid([0-9]+)/:id([0-9]+).html", &m.BookController{}, "GET:Detail"),
+		beego.NSRouter("/book/:id([0-9]+)/download.html", &m.BookController{}, "GET:Download"),
 
 		beego.NSRouter("/cate/:id([0-9]+).html", &m.BookController{}, "GET:List"),
 		beego.NSRouter("/cate/:id([0-9]+)/p:page([0-9]+).html", &m.BookController{}, "GET:List"),

@@ -73,6 +73,11 @@
 	          <a href="{{urlfor "home.BookController.Detail" "id" .FirstChapId "novid" .Nov.Id}}" target="_blank" class="btn-read">开始阅读</a>
 			{{end}}
 	          <a href="javascript:addFavorite('{{.Nov.Name}}', location.href);" class="btn-keep" id="fav_btn">收藏本书</a>
+	          {{if ne (itoa .Nov.ChapterNum) ""}}
+	          <a href="{{urlfor "home.BookController.Download" "id" .Nov.Id}}" class="btn-download" id="download_btn">下载TXT</a>
+	          {{else}}
+	          <a href="javascript:alert('暂无章节，无法下载');" class="btn-download btn-disabled">下载TXT</a>
+	          {{end}}
 	        </div>
 	      </div>
 	    </div>
