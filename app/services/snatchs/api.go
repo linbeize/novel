@@ -217,12 +217,37 @@ func (this *ApiSnatch) GetChapters(provider *models.SnatchRule, rawurl string) (
 
 	t1 := time.Now()
 
-	titles, err := this.client.GetBookList(id)
+	// 目录必须用 dirid（目录 ID），而非书籍 ID。
+	//
+	// 该站接口存在一个不一致：/api/book 同时返回 id 与 dirid，
+	// 而 /api/booklist 的 id 参数实际取的是 dirid。
+	// 多数书的 dirid 恰好等于 id，因此这个差异容易漏掉；
+	// 但抽样统计约三分之一的书籍两者不同，用错就拿不到目录
+	// （接口返回 {"list":null}）。
+	// 正文接口 /api/chapter 则两个 ID 都能用，故此处仅目录需要换 ID。
+	dirId := id
+	if b, derr := this.client.GetBook(id); derr == nil {
+		if d := strings.TrimSpace(b.DirId.String()); d != "" && d != id {
+			dirId = d
+			log.Debug(fmt.Sprintf("[%s]目录 ID 与书籍 ID 不同: book=%s dir=%s",
+				provider.Name, id, dirId))
+		}
+	} else {
+		log.Warn("获取 dirid 失败，按书籍 ID 尝试目录：", id, " ", derr)
+	}
+
+	titles, err := this.client.GetBookList(dirId)
 	if err != nil {
 		return nil, err
 	}
+
+	// 兼容接口返回 {"list":null} 的情况：换个 ID 再试一次
+	if len(titles) == 0 && dirId != id {
+		log.Warn("目录为空，回退用书籍 ID 重试：", id)
+		titles, _ = this.client.GetBookList(id)
+	}
 	if len(titles) == 0 {
-		return nil, fmt.Errorf("目录为空: id=%s", id)
+		return nil, fmt.Errorf("目录为空: id=%s dirid=%s", id, dirId)
 	}
 
 	links := make([]*SnatchInfo, 0, len(titles))

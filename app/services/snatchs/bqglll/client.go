@@ -60,37 +60,57 @@ func NewClient() *Client {
 
 /* ---------- 数据结构 ---------- */
 
+// FlexString 兼容「字符串或数字」的 JSON 字段
+//
+// 该站部分字段的类型并不稳定，例如 /api/chapter 的 dirid：
+// 当 dirid 等于书籍 ID 时返回数字，不同时返回字符串。
+// 用一个自定义类型兼容两种情况，避免因类型变化导致解析整体失败。
+type FlexString string
+
+func (f *FlexString) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), `"`)
+	if s == "null" {
+		*f = ""
+		return nil
+	}
+	*f = FlexString(s)
+	return nil
+}
+
+// String 取值
+func (f FlexString) String() string { return string(f) }
+
 // Book 书籍元数据（/api/book）
 //
 // 注意：该接口的所有字段均为字符串（含 id 与 dirid），
 // 与 /api/chapter 返回真正的数字类型不同，故此处统一用 string，
 // 需要数值时再用 IDToInt 转换。
 type Book struct {
-	Id            string `json:"id"`
-	Title         string `json:"title"`
-	SortName      string `json:"sortname"`
-	Author        string `json:"author"`
-	Full          string `json:"full"`
-	Intro         string `json:"intro"`
-	LastChapterId string `json:"lastchapterid"`
-	LastChapter   string `json:"lastchapter"`
-	LastUpdate    string `json:"lastupdate"`
-	DirId         string `json:"dirid"`
+	Id            string     `json:"id"`
+	Title         string     `json:"title"`
+	SortName      string     `json:"sortname"`
+	Author        string     `json:"author"`
+	Full          string     `json:"full"`
+	Intro         string     `json:"intro"`
+	LastChapterId string     `json:"lastchapterid"`
+	LastChapter   string     `json:"lastchapter"`
+	LastUpdate    string     `json:"lastupdate"`
+	DirId         FlexString `json:"dirid"`
 }
 
 // Chapter 章节正文（/api/chapter）
 type Chapter struct {
-	Id          int    `json:"id"`
-	ChapterId   int    `json:"chapterid"`
-	DirId       int    `json:"dirid"`
-	Title       string `json:"title"`
-	Author      string `json:"author"`
-	ChapterName string `json:"chaptername"`
-	CS          int    `json:"cs"` // 最大有效 chapterid
-	CK          string `json:"ck"`
-	Txt         string `json:"txt"`
-	Time        int64  `json:"time"`
-	Md5         string `json:"md5"`
+	Id          int        `json:"id"`
+	ChapterId   int        `json:"chapterid"`
+	DirId       FlexString `json:"dirid"`
+	Title       string     `json:"title"`
+	Author      string     `json:"author"`
+	ChapterName string     `json:"chaptername"`
+	CS          int        `json:"cs"` // 最大有效 chapterid
+	CK          string     `json:"ck"`
+	Txt         string     `json:"txt"`
+	Time        int64      `json:"time"`
+	Md5         string     `json:"md5"`
 }
 
 // BookList 目录响应（/api/booklist）
