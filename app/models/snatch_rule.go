@@ -134,6 +134,16 @@ type Rule struct {
 	FindURL             string `json:"find_url"`
 	FindCharset         string `json:"find_charset"`
 	FindBookURLSelector string `json:"find_book_url_selector"`
+
+	// APIType 标注该规则使用接口型采集器
+	//
+	// 项目原有采集器基于 CSS 选择器解析 HTML，适用于服务端渲染的站点。
+	// 部分站点是 SPA + JSON 接口结构（正文在接口里、且需要加密签名），
+	// 无法用选择器描述，需单独的采集实现。
+	//
+	// 该字段非空时，由 snatchs.ApiSnatch 接管，取值即采集器标识；
+	// 为空则走原有的 CSS 采集逻辑。这样两种采集器共存、互不影响。
+	APIType string `json:"api_type"`
 }
 
 type ArgsListRule struct {

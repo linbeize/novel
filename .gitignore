@@ -37,3 +37,5 @@ novel.log
 
 # 环境特异的迁移脚本(硬编码本机库名 novel/chapter)
 data/migration_*_novel.sql
+dist/
+static/dist/

@@ -10,9 +10,20 @@
     "weight": 0,
     "header": "",
     "searchUrl": "/api/search?kw={{key}}&size=30&p={{page}}",
-    "exploreUrl": "",
+    "exploreUrl": "热门榜单::/api/rank\n玄幻魔法::/api/books?cate=1&ot=1\n武侠修真::/api/books?cate=2&ot=1\n都市言情::/api/books?cate=3&ot=1\n历史军事::/api/books?cate=4&ot=1\n侦探推理::/api/books?cate=5&ot=1\n网游动漫::/api/books?cate=6&ot=1\n科幻灵异::/api/books?cate=7&ot=1\n高干总裁::/api/books?cate=11&ot=1\n其他类型::/api/books?cate=13&ot=1\n最近更新::/api/books?ot=2\n字数最多::/api/books?ot=3",
     "jsLib": "",
     "ruleSearch": {
+      "bookList": "$.data.list[*]",
+      "name": "$.name",
+      "author": "$.author",
+      "kind": "$.cate_name",
+      "wordCount": "$.text_num",
+      "intro": "",
+      "lastChapter": "$.chapter_title",
+      "coverUrl": "$.cover",
+      "bookUrl": "$.url"
+    },
+    "ruleExplore": {
       "bookList": "$.data.list[*]",
       "name": "$.name",
       "author": "$.author",

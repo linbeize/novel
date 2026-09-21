@@ -39,12 +39,15 @@ var (
 
 type Snatch struct {
 	c *snatchs.Snatch
+
+	// api 接口型采集器（用于 SPA + JSON 接口结构的站点）
+	api *snatchs.ApiSnatch
 }
 
 func NewSnatch() *Snatch {
 	// 注入采集节奏来源：读取后台可配置的间隔，便于随时调速而无需改代码
-	snatchs.SetPaceProvider(func() (time.Duration, time.Duration) {
-		// 单位毫秒；未配置时用默认值
+	// 采集节奏：单位毫秒，未配置时用默认值
+	pace := func() (time.Duration, time.Duration) {
 		interval := ConfigService.Int64("SnatchInterval", 1500)
 		jitter := ConfigService.Int64("SnatchJitter", 800)
 
@@ -57,13 +60,28 @@ func NewSnatch() *Snatch {
 
 		return time.Duration(interval) * time.Millisecond,
 			time.Duration(jitter) * time.Millisecond
-	})
+	}
+
+	// 代理来源
+	proxy := func() string {
+		return ProxyService.Get()
+	}
+
+	snatchs.SetPaceProvider(pace)
+	snatchs.SetApiPaceProvider(pace)
+	snatchs.SetApiProxyProvider(proxy)
 
 	return &Snatch{
 		c: snatchs.NewSnatch(func() string {
 			return ProxyService.Get()
 		}),
+		api: snatchs.NewApiSnatch(),
 	}
+}
+
+// 判断该规则是否走接口型采集
+func (this *Snatch) isAPI(provider *models.SnatchRule) bool {
+	return snatchs.IsAPI(provider)
 }
 
 // 执行指定小说的采集任务
@@ -88,7 +106,13 @@ func (this *Snatch) FindNovels(kw string) []*snatchs.SnatchInfo {
 	providers := SnatchRuleService.GetSnatchs()
 	var list []*snatchs.SnatchInfo
 	for _, provider := range providers {
-		info, err := this.c.FindNovel(provider, kw)
+		var info *snatchs.SnatchInfo
+		var err error
+		if this.isAPI(provider) {
+			info, err = this.api.FindNovel(provider, kw)
+		} else {
+			info, err = this.c.FindNovel(provider, kw)
+		}
 		if err == nil {
 			list = append(list, info)
 		}
@@ -100,30 +124,45 @@ func (this *Snatch) FindNovels(kw string) []*snatchs.SnatchInfo {
 // 查找小说
 func (this *Snatch) FindNovel(source, kw string) (*snatchs.SnatchInfo, error) {
 	provider := SnatchRuleService.GetByCode(source)
+	if this.isAPI(provider) {
+		return this.api.FindNovel(provider, kw)
+	}
 	return this.c.FindNovel(provider, kw)
 }
 
 // 获取一本小说
 func (this *Snatch) GetNovel(source, rawurl string) (*snatchs.SnatchInfo, error) {
 	provider := SnatchRuleService.GetByCode(source)
+	if this.isAPI(provider) {
+		return this.api.GetNovel(provider, rawurl)
+	}
 	return this.c.GetNovel(provider, rawurl)
 }
 
 // 获取小说章节内容
 func (this *Snatch) GetChapter(source, rawurl string) (*snatchs.SnatchInfo, error) {
 	provider := SnatchRuleService.GetByCode(source)
+	if this.isAPI(provider) {
+		return this.api.GetChapter(provider, rawurl)
+	}
 	return this.c.GetChapter(provider, rawurl)
 }
 
 // 获取小说章节内容（自动拼接同章分页正文）
 func (this *Snatch) GetChapterFull(source, rawurl string) (*snatchs.SnatchInfo, error) {
 	provider := SnatchRuleService.GetByCode(source)
+	if this.isAPI(provider) {
+		return this.api.GetChapterFull(provider, rawurl)
+	}
 	return this.c.GetChapterFull(provider, rawurl)
 }
 
 // 获取小说章节列表
 func (this *Snatch) GetChapters(source, rawurl string) ([]*snatchs.SnatchInfo, error) {
 	provider := SnatchRuleService.GetByCode(source)
+	if this.isAPI(provider) {
+		return this.api.GetChapters(provider, rawurl)
+	}
 	return this.c.GetChapters(provider, rawurl)
 }
 
@@ -149,8 +188,13 @@ func (this *Snatch) InitNovel(url string) error {
 		return err
 	}
 
-	// 获取小说
-	info, err := this.c.GetNovel(provider, url)
+	// 获取小说（按规则类型分派到对应的采集器）
+	var info *snatchs.SnatchInfo
+	if this.isAPI(provider) {
+		info, err = this.api.GetNovel(provider, url)
+	} else {
+		info, err = this.c.GetNovel(provider, url)
+	}
 	if err != nil {
 		return err
 	}
