@@ -1,14 +1,8 @@
 package services
 
 import (
-	"os"
 	"strings"
-	"sync"
 	"testing"
-
-	"github.com/astaxie/beego"
-
-	"github.com/vckai/novel/app/models"
 )
 
 // 针对 bqgnovels 规则的真实采集验证
@@ -16,34 +10,10 @@ import (
 // 该站目录每页只输出 100 章且无「下一页」链接，翻页靠查询参数，
 // 因此重点验证 chapter_page_url_template 是否把全部章节取回。
 // 需联网，默认跳过；用 go test -run TestBqgnovelsRule 显式指定即可运行。
-// 初始化一次应用依赖（数据库、服务），供联网测试使用。
-// 需在项目根目录运行测试，以便读取 conf/app.conf 与 conf/data.conf。
-var initOnce sync.Once
-
-func initApp() {
-	initOnce.Do(func() {
-		// 切到项目根，使 beego 能读到 conf/ 下的配置
-		if wd, err := os.Getwd(); err == nil {
-			if strings.HasSuffix(wd, "/app/services") {
-				_ = os.Chdir("../..")
-			}
-		}
-		beego.BConfig.RunMode = "prod"
-		beego.LoadAppConfig("ini", "conf/app.conf")
-		models.InitDB()
-		Init()
-	})
-}
-
 func TestBqgnovelsRule(t *testing.T) {
 	initApp()
 
-	// 需联网且耗时较长（约 30 秒/项），故默认跳过；
-	// 显式指定 RUN_SNATCH_TEST=1 时才执行：
-	//   RUN_SNATCH_TEST=1 go test ./app/services/ -run TestBqgnovels -v
-	if os.Getenv("RUN_SNATCH_TEST") != "1" {
-		t.Skip("联网测试默认跳过，设置 RUN_SNATCH_TEST=1 开启")
-	}
+	requireNetwork(t)
 
 	chaps, err := SnatchService.GetChapters("bqgnovels", "https://www.bqgnovels.com/book/50049")
 	if err != nil {
@@ -84,12 +54,7 @@ func TestBqgnovelsRule(t *testing.T) {
 // 检查目录里是否存在空标题/空链接的条目
 func TestBqgnovelsCatalogIntegrity(t *testing.T) {
 	initApp()
-	// 需联网且耗时较长（约 30 秒/项），故默认跳过；
-	// 显式指定 RUN_SNATCH_TEST=1 时才执行：
-	//   RUN_SNATCH_TEST=1 go test ./app/services/ -run TestBqgnovels -v
-	if os.Getenv("RUN_SNATCH_TEST") != "1" {
-		t.Skip("联网测试默认跳过，设置 RUN_SNATCH_TEST=1 开启")
-	}
+	requireNetwork(t)
 
 	chaps, err := SnatchService.GetChapters("bqgnovels", "https://www.bqgnovels.com/book/50049")
 	if err != nil {
