@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/vckai/novel/app/models"
+	"github.com/vckai/novel/app/services/snatchs"
 	"github.com/vckai/novel/app/utils/log"
 )
 
@@ -350,6 +351,34 @@ func (this *SnatchTask) upChapter(source, chapLink string) uint8 {
 		}
 
 		chap := info.Chap
+
+		// 投毒检测：部分采集站会对疑似爬虫的请求返回伪造正文
+		// （标题正确、内容为随机软文），若直接入库会污染书库且难以清理。
+		// 命中则不入库，并计入失败；连续命中达阈值时暂停采集。
+		if err == nil {
+			if pr := snatchs.DetectPoison(chap.Desc); pr.IsPoison {
+				log.Warn("[投毒拦截] 小说:", nov.Name, " provider:", source,
+					" 章节:", chapterNo, " 原因:", pr.Reason)
+				snatchs.PoisonObserved(source, pr, chap.Desc)
+
+				if PauseService.PauseIfPoisoned(source, pr.Reason, chap.Desc) {
+					// 已达阈值：先把已采到的正常章节写入，再结束本次任务。
+					// 不继续采集后续章节，避免持续请求投毒接口。
+					if len(chaps) > 0 {
+						flush()
+					}
+					log.Warn("[自动暂停] 本次任务提前结束 小说:", nov.Name)
+					return TASKWAIT
+				}
+
+				info.Chap.Status = 1
+				info.Chap.Desc = ""
+				errNum++
+				chap = info.Chap
+			} else {
+				snatchs.PoisonCleared(source)
+			}
+		}
 
 		// 跳过无用的章节
 		if strings.Contains(chap.Title, "请假一晚") ||

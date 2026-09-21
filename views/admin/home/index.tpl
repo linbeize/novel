@@ -6,6 +6,60 @@
 	</div>
 
 	<div class="x-body">
+        {{if .Pause.Paused}}
+        <!-- 采集因投毒而暂停：显示时间与原因，便于人工确认后恢复 -->
+        <div class="layui-card" style="border-left:4px solid #FF5722;background:#FFF8F5;">
+            <div class="layui-card-header" style="color:#D84315;font-weight:bold;">
+                <i class="layui-icon layui-icon-notice"></i> 采集已自动暂停
+            </div>
+            <div class="layui-card-body" style="line-height:1.9;">
+                <p style="color:#D84315;margin-bottom:8px;">
+                    原因：检测到采集站返回伪造内容（标题正常但正文为随机软文），已停止采集以防污染书库。
+                </p>
+                <table class="layui-table" style="margin:0;">
+                    <tbody>
+                        <tr>
+                            <th width="20%">暂停时间</th>
+                            <td><strong>{{.Pause.AtText}}</strong> <span style="color:#999;">（{{.Pause.AgoText}}）</span></td>
+                        </tr>
+                        <tr>
+                            <th>触发来源</th>
+                            <td>{{.Pause.Source}}</td>
+                        </tr>
+                        <tr>
+                            <th>判定依据</th>
+                            <td>{{.Pause.Reason}}</td>
+                        </tr>
+                        <tr>
+                            <th>内容样本</th>
+                            <td style="color:#666;word-break:break-all;">{{.Pause.Sample}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top:10px;color:#666;">
+                    确认站点已恢复正常后，可到「系统设置」重新开启「自动采集」，或点击
+                    <a href="javascript:;" onclick="resumeSnatch()" style="color:#1E9FFF;">此处恢复</a>。
+                </p>
+            </div>
+        </div>
+        <script type="text/javascript">
+        function resumeSnatch(){
+            if(!confirm('确认采集站已恢复正常，并重新开启采集？')) return;
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/admin/home/resume', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function(){
+                if(xhr.readyState !== 4) return;
+                try {
+                    var r = JSON.parse(xhr.responseText);
+                    alert(r.msg || '已恢复');
+                    if(r.ret === 0){ location.reload(); }
+                } catch(e){ alert('操作失败'); }
+            };
+            xhr.send('');
+        }
+        </script>
+        {{end}}
         <div class="layui-card">
             <blockquote class="layui-elem-quote">
                 欢迎使用{{.aOut.Title}}！<span class="f-14">v{{.aOut.Version}}</span>

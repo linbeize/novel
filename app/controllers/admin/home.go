@@ -74,7 +74,22 @@ func (this *HomeController) Index() {
 		}
 	}
 
+	// 采集暂停状态（因检测到站点返回伪造内容而自动暂停时展示）
+	this.Data["Pause"] = services.PauseService.Info()
+
 	this.View("home/index.tpl")
+}
+
+// Resume 人工恢复采集
+//
+// 采集因投毒自动暂停后，确认站点恢复正常时调用此接口重新开启。
+func (this *HomeController) Resume() {
+	if err := services.PauseService.Resume(); err != nil {
+		this.OutJson(1001, "恢复失败："+err.Error())
+		return
+	}
+
+	this.OutJson(0, "已恢复采集")
 }
 
 // 图片上传处理
