@@ -104,7 +104,12 @@ func (this *HomeController) Index() {
 // 全部作品
 func (this *HomeController) Cate() {
 	size := 10
+	// 页码规范化：伪静态或 query 都可能传入 0、负数或非数字，
+	// 直接参与 offset 计算会产生负偏移，导致返回异常结果。
 	p, _ := this.GetInt("p", 1)
+	if p < 1 {
+		p = 1
+	}
 	offset := (p - 1) * size
 
 	// 分类ID
@@ -130,10 +135,29 @@ func (this *HomeController) Cate() {
 		"uptime":   upTime,
 		"ot":       ot,
 	}
+
+	// 取当页数据（同时得到总数，一次查询完成）
 	novs, count := services.NovelService.GetList(size, offset, search)
+
+	// 页码越界时收敛到最后一页并重取。
+	// 注意不能先单独查总数：GetAll 在 count>0 时仍会执行数据查询，
+	// 若 Limit 传 0 则会把全部匹配行取出，反而不如直接取当页。
+	maxPage := 1
+	if count > 0 {
+		maxPage = int((count + int64(size) - 1) / int64(size))
+	}
+	if p > maxPage {
+		p = maxPage
+		offset = (p - 1) * size
+		novs, _ = services.NovelService.GetList(size, offset, search)
+	}
+
 	// 设置分页
-	// 注入伪静态地址生成器，使分页链接输出 /cate/1/p2.html 形式
+	// 注入伪静态地址生成器，使分页链接输出 /cate/1/p2.html 形式。
+	// 同时用 SetPage 显式告知当前页码：伪静态把页码放在路径中，
+	// 分页器默认只读 query 的 p，不设置会导致页码高亮与前后页判断错误。
 	pager := this.SetPaginator(size, count)
+	pager.SetPage(p)
 	cateId, statusV, textNumV, upTimeV, otV := cid, status, textNum, upTime, ot
 	pager.URLBuilder = func(page int) string {
 		return utils.PrettyCateURL("", cateId, page, statusV, textNumV, upTimeV, otV)
