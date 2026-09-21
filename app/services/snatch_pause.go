@@ -85,6 +85,9 @@ func (this *pauseService) PauseIfPoisoned(source, reason, sample string) bool {
 	log.Warn("[自动暂停] 时间:", now.Format("2006-01-02 15:04:05"),
 		" 来源:", source, " 原因:", reason)
 
+	// 写入后台操作日志，便于事后查看投毒发生在哪些时间段
+	WritePoisonPaused(source, reason, sample)
+
 	return true
 }
 

@@ -66,6 +66,10 @@ func initSnatch() {
 	log.Info("初始化小说更新任务:", novLen, "本")
 
 	manager.Run()
+
+	// 投毒后自动试探恢复：定时探测站点是否已恢复正常，
+	// 连续多次正常才重新开启采集，并记录投毒时段。
+	PoisonProbeService.Start()
 }
 
 type SnatchTask struct {
