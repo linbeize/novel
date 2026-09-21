@@ -19,9 +19,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/astaxie/beego"
+
 	"github.com/vckai/novel/app/models"
 	"github.com/vckai/novel/app/services"
-	"github.com/vckai/novel/app/utils"
 )
 
 /*
@@ -334,7 +335,7 @@ func (this *BaseController) novelDetail(n *models.Novel) map[string]interface{} 
 		"name":               n.Name,
 		"author":             n.Author,
 		"cover":              this.absURL(n.Cover),
-		"desc":               utils.SubstrNoHtml(n.Desc, 0, 0),
+		"desc":               this.plainText(n.Desc),
 		"cate_id":            n.CateId,
 		"cate_name":          n.CateName,
 		"status":             n.Status,
@@ -349,6 +350,22 @@ func (this *BaseController) novelDetail(n *models.Novel) map[string]interface{} 
 		"updated_at":         n.UpdatedAt,
 		"is_original":        n.IsOriginal,
 	}
+}
+
+// 把简介的 HTML 片段转为纯文本
+//
+// 库中 desc 可能含 <br>、&nbsp; 等标记。这里不做截断——App 需要完整简介，
+// 由客户端自行决定展示多少。
+func (this *BaseController) plainText(s string) string {
+	if s == "" {
+		return ""
+	}
+
+	s = beego.HTML2str(s)
+	s = strings.Replace(s, "\u00a0", " ", -1)
+	s = strings.Replace(s, "\n", " ", -1)
+
+	return strings.TrimSpace(s)
 }
 
 // 计算总页数

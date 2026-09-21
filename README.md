@@ -8,6 +8,10 @@
 * Beego1.7.2
 * MySQL5.7
 
+### 接口文档
+
+对接 App / 小程序请见 [docs/API.md](docs/API.md)（只读浏览接口）。
+
 ### 效果展示
 
 #### PC网站效果

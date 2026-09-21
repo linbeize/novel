@@ -154,7 +154,7 @@ func (this *Novel) getTodayRecs(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "author"}
+	args.Fields = []string{"id", "name", "cover", "author", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_today_rec": 1,
 	}
@@ -169,7 +169,7 @@ func (this *Novel) GetRecs(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "cate_id", "cate_name", "author"}
+	args.Fields = []string{"id", "name", "cover", "cate_id", "cate_name", "author", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_rec": 1,
 	}
@@ -184,7 +184,7 @@ func (this *Novel) GetVipRecs(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover"}
+	args.Fields = []string{"id", "name", "cover", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_vip_rec": 1,
 	}
@@ -199,7 +199,7 @@ func (this *Novel) GetOriginals(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_original": 1,
 	}
@@ -214,7 +214,7 @@ func (this *Novel) GetHots(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_hot": 1,
 	}
@@ -229,7 +229,7 @@ func (this *Novel) GetSignNewBooks(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_sign_new_book": 1,
 	}
@@ -244,7 +244,7 @@ func (this *Novel) GetCollects(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_collect": 1,
 	}
@@ -276,7 +276,7 @@ func (this *Novel) getRanks(size, offset int) []*models.Novel {
 	args.Limit = size
 	args.Offset = offset
 	args.OrderBy = "-views"
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 
 	novs, _ := this.GetAll(args)
 
@@ -289,7 +289,7 @@ func (this *Novel) GetCateRanks(cateId, size, offset int) []*models.Novel {
 	args.Limit = size
 	args.Offset = offset
 	args.OrderBy = "-views"
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"cate_id": cateId,
 	}
@@ -320,7 +320,7 @@ func (this *Novel) getNewUps(size, offset int) []*models.Novel {
 	args.Limit = size
 	args.Offset = offset
 	args.OrderBy = "-chapter_updated_at"
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 
 	novs, _ := this.GetAll(args)
 
@@ -332,7 +332,7 @@ func (this *Novel) GetNews(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 
 	novs, _ := this.GetAll(args)
 
@@ -344,7 +344,7 @@ func (this *Novel) GetVipRewards(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_vip_reward": 1,
 	}
@@ -359,7 +359,7 @@ func (this *Novel) GetVipUps(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"is_vip_up": 1,
 	}
@@ -374,7 +374,7 @@ func (this *Novel) GetEnds(size, offset int) []*models.Novel {
 	args := models.ArgsNovelList{}
 	args.Limit = size
 	args.Offset = offset
-	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name"}
+	args.Fields = []string{"id", "name", "cover", "desc", "views", "author", "cate_id", "cate_name", "chapter_num", "chapter_updated_at", "status", "text_num", "chapter_title"}
 	args.FilterMaps = map[string]int{
 		"status": int(models.BOOKFINISH),
 	}
