@@ -24,6 +24,14 @@ var (
 )
 
 func init() {
+	// 会话配置兜底
+	//
+	// beego 默认会话有效期仅 1 小时、且用内存存储（服务重启即全部失效），
+	// 后台管理会表现为「每次都得重新登录」。conf/app.conf 中已显式配置，
+	// 但该文件不随代码分发（各环境不同），故此处再做一层兜底：
+	// 仅当配置文件未设置时才生效，已配置则以配置文件为准。
+	applySessionDefaults()
+
 	// 初始化db
 	models.InitDB()
 
@@ -89,4 +97,31 @@ func initLang() {
 	}
 
 	beego.AddFuncMap("i18n", i18n.Tr)
+}
+
+// applySessionDefaults 会话配置兜底
+//
+// 只在配置文件未显式设置时生效，便于不同环境按需覆盖。
+func applySessionDefaults() {
+	const week = 7 * 24 * 3600
+
+	s := &beego.BConfig.WebConfig.Session
+
+	// 默认 1 小时过短，后台管理场景下频繁掉登录
+	if s.SessionGCMaxLifetime <= 3600 {
+		s.SessionGCMaxLifetime = week
+	}
+
+	// 0 表示浏览器会话级 Cookie，关掉浏览器即失效
+	if s.SessionCookieLifeTime <= 0 {
+		s.SessionCookieLifeTime = week
+	}
+
+	// 内存存储会在服务重启后丢失全部会话；改用文件存储
+	if s.SessionProvider == "" || s.SessionProvider == "memory" {
+		s.SessionProvider = "file"
+		if s.SessionProviderConfig == "" {
+			s.SessionProviderConfig = "./data/session"
+		}
+	}
 }

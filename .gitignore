@@ -39,3 +39,4 @@ novel.log
 data/migration_*_novel.sql
 dist/
 static/dist/
+data/session/

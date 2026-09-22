@@ -214,6 +214,7 @@ func (this *ApiSnatch) FindNovel(provider *models.SnatchRule, kw string) (*Snatc
 	// 故再取一次详情补齐。失败不影响搜索结果的返回。
 	if detail, derr := this.client.GetBook(b.Id); derr == nil {
 		nov.CateName = detail.SortName
+		nov.CateId = mapCateId(provider, detail.SortName)
 		nov.ChapterTitle = detail.LastChapter
 		if detail.Full == "完结" || detail.Full == "完本" {
 			nov.Status = models.BOOKFINISH
@@ -255,6 +256,7 @@ func (this *ApiSnatch) GetNovel(provider *models.SnatchRule, rawurl string) (*Sn
 	nov.Name = b.Title
 	nov.Author = b.Author
 	nov.CateName = b.SortName
+	nov.CateId = mapCateId(provider, b.SortName)
 	nov.Desc = b.Intro
 	nov.ChapterTitle = b.LastChapter
 	nov.Cover = coverURL(b.Id)
@@ -412,6 +414,42 @@ func parseChapterLink(rawurl string) (int, int, error) {
 	}
 
 	return bookId, chapNo, nil
+}
+
+// mapCateId 按规则的分类映射表把站点分类名转为本地分类 ID
+//
+// 该站的分类名与本地的并不一致（如站点「玄幻奇幻」对应本地「玄幻魔法」），
+// 因此必须在规则里配置 cate_map 做映射。未命中时退回默认分类，
+// 避免因分类为空导致整本书保存失败（Save 会校验 CateId 非空）。
+func mapCateId(provider *models.SnatchRule, cateName string) uint32 {
+	cateName = strings.TrimSpace(cateName)
+
+	// 一级：完全相等
+	for _, v := range provider.CateMaps {
+		if strings.TrimSpace(v.Name) == cateName {
+			return v.Id
+		}
+	}
+
+	// 二级：前缀匹配
+	//
+	// 该站的分类存在两套写法：分类页返回全称（玄幻奇幻），
+	// 而书籍接口返回简称（玄幻）。规则里通常按全称配置，
+	// 因此这里用「映射名以站点分类名开头」来兜住简称的情况。
+	// 例如站点给「玄幻」，规则配「玄幻奇幻」→ 匹配成功。
+	if cateName != "" {
+		for _, v := range provider.CateMaps {
+			if strings.HasPrefix(strings.TrimSpace(v.Name), cateName) {
+				return v.Id
+			}
+		}
+	}
+
+	// 未命中：用默认分类，保证仍能入库（Save 会校验 CateId 非空）
+	log.Debug(fmt.Sprintf("[%s]分类未映射: %q，用默认 ID=%d",
+		provider.Code, cateName, DEF_CATE_ID))
+
+	return DEF_CATE_ID
 }
 
 // coverURL 按站点规则拼出封面地址
