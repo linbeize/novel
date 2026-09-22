@@ -56,9 +56,9 @@
       "info_desc_filter": "速读谷[^<]*\n一秒记住[^<]*\n请记住本书[^<]*\n本章未完[^<]*",
       "info_pre_page_selector": ".prenext span:nth-of-type(1) a",
       "info_next_page_selector": ".prenext span:nth-of-type(2) a",
-      "find_url": "https://www.shudugu.org/search?q=",
+      "find_url": "https://www.shudugu.org/i/sor.aspx?key=",
       "find_charset": "",
-      "find_book_url_selector": ".list.clear li h3 a"
+      "find_book_url_selector": ".item h3 a"
     },
     "cate_maps": [
       {

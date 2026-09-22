@@ -259,6 +259,17 @@ func (this *Snatch) FindNovel(provider *models.SnatchRule, kw string) (*SnatchIn
 	}
 
 	kw = strings.TrimSpace(kw)
+
+	// POST 搜索：部分站点的搜索表单只接受 POST，且需要额外参数
+	// （如 biquge365 需 type=articlename）。规则里用如下写法表达：
+	//
+	//	POST:https://www.example.com/s.php|type=articlename&s={{kw}}
+	//
+	// 不带 POST: 前缀的仍走原有的 GET 拼接逻辑，不影响既有站点。
+	if strings.HasPrefix(rule.FindURL, "POST:") {
+		return this.findNovelByPost(provider, rule, charset, kw)
+	}
+
 	kw = url.QueryEscape(kw)
 
 	// 解析URL
@@ -1027,4 +1038,120 @@ func (this *Snatch) FindNovelList(provider *models.SnatchRule, kw string, limit 
 	}
 
 	return []*SnatchInfo{one}, nil
+}
+
+// findNovelByPost 以 POST 方式搜索（供只接受 POST 的站点使用）
+//
+// 规则写法：POST:{url}|{参数模板}
+// 参数模板中用 {{kw}} 占位关键词，以 & 分隔多个参数，值需自行做
+// URL 编码（因为要作为表单字段值发送）。
+func (this *Snatch) findNovelByPost(provider *models.SnatchRule, rule *models.Rule, charset, kw string) (*SnatchInfo, error) {
+	t1 := time.Now()
+
+	spec := strings.TrimPrefix(rule.FindURL, "POST:")
+
+	parts := strings.SplitN(spec, "|", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("POST 搜索地址格式错误: %s", rule.FindURL)
+	}
+
+	searchURL := strings.TrimSpace(parts[0])
+	paramTpl := strings.TrimSpace(parts[1])
+
+	// 组装表单参数
+	form := url.Values{}
+	for _, pair := range strings.Split(paramTpl, "&") {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		k := strings.TrimSpace(kv[0])
+		v := strings.ReplaceAll(kv[1], "{{kw}}", kw)
+		form.Set(k, v)
+	}
+
+	// 请求搜索页
+	res, resp, err := this.postForm(searchURL, form, charset)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, ErrNotResp
+	}
+
+	// 解析结果页
+	doc, err := parseHTML(res, charset)
+	if err != nil {
+		return nil, err
+	}
+
+	// 定位书籍页地址
+	novURL := resp.Header.Get("Location")
+	if len(novURL) == 0 || !this.IsBookURL(provider, novURL) {
+		novURL, _ = doc.Find(rule.FindBookURLSelector).Attr("href")
+	}
+
+	if len(novURL) == 0 {
+		return nil, ErrNotNovURL
+	}
+
+	base, err := url.Parse(searchURL)
+	if err != nil {
+		return nil, err
+	}
+
+	novURL, err = this.genrateURL(base, novURL)
+	if err != nil {
+		return nil, err
+	}
+
+	if !this.IsBookURL(provider, novURL) {
+		return nil, ErrInvalidURL
+	}
+
+	info, err := this.GetNovel(provider, novURL)
+	if err != nil {
+		return nil, err
+	}
+
+	info.UseTime = time.Since(t1)
+
+	log.Debug(fmt.Sprintf("[%s]查找小说[%s]，使用时间：%v", provider.Name, info.Nov.Name, info.UseTime))
+
+	return info, nil
+}
+
+// postForm 发送表单 POST 请求
+func (this *Snatch) postForm(rawurl string, form url.Values, charset string) ([]byte, *http.Response, error) {
+	conf := &xhttp.ClientConfig{
+		Timeout:   30 * time.Second,
+		Dial:      15 * time.Second,
+		KeepAlive: 60 * time.Second,
+	}
+
+	c := xhttp.NewClient(conf)
+	if this.proxyFunc != nil {
+		c.SetProxy(this.proxyFunc())
+	}
+
+	interval, jitter := snatchPace()
+	throttle := utils.ThrottleInstance()
+	throttle.Wait(rawurl, interval, jitter)
+	res, resp, err := c.Post(context.TODO(), rawurl, form, nil)
+	throttle.Done(rawurl)
+
+	return res, resp, err
+}
+
+// parseHTML 按指定编码解析 HTML
+func parseHTML(res []byte, charset string) (*goquery.Document, error) {
+	var body io.Reader = bytes.NewReader(res)
+
+	if charset != "" && charset != "UTF-8" {
+		if enc := mahonia.NewDecoder("GB18030"); enc != nil {
+			body = enc.NewReader(body)
+		}
+	}
+
+	return goquery.NewDocumentFromReader(body)
 }
