@@ -98,6 +98,12 @@ func adminRouters() {
 		// 欢迎页面路由
 		beego.NSAutoRouter(&admin.HomeController{}),
 
+		// bqglll 采集源设置
+		beego.NSAutoRouter(&admin.BqglllController{}),
+
+		// TXT 导入
+		beego.NSAutoRouter(&admin.TxtImportController{}),
+
 		// 权限路由
 		beego.NSAutoRouter(&admin.RoleController{}),
 

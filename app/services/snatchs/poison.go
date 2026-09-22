@@ -249,8 +249,26 @@ func clip(s string, n int) string {
 	return string(r[:n]) + "…"
 }
 
-// PoisonThreshold 连续命中多少次判定为投毒状态（供外部判断）
-const PoisonThreshold = poisonThreshold
+// PoisonThreshold 连续命中多少次判定为投毒状态
+//
+// 默认值见 poisonThreshold；实际阈值可由设置项调整（见 snatchs 包的
+// SetPoisonThresholdProvider）。这里保留函数形态以保证调用方不变。
+func PoisonThreshold() int {
+	if thresholdProvider != nil {
+		if n := thresholdProvider(); n > 0 {
+			return n
+		}
+	}
+	return poisonThreshold
+}
+
+// thresholdProvider 由 SetPoisonThresholdProvider 注入
+var thresholdProvider func() int
+
+// SetPoisonThresholdProvider 注入阈值提供者
+func SetPoisonThresholdProvider(f func() int) {
+	thresholdProvider = f
+}
 
 // CleanSample 清理并截断样本，便于写入配置或日志
 func CleanSample(s string, n int) string {

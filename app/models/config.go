@@ -93,3 +93,26 @@ func (m *Config) GetAll() []*Config {
 
 	return list
 }
+
+// InsertKey 插入一个新的配置项（键已存在则忽略）
+func (m *Config) InsertKey(key, value string) error {
+	if key == "" {
+		return errors.New("error params")
+	}
+
+	now := uint32(time.Now().Unix())
+
+	c := &Config{
+		Key:       key,
+		Value:     value,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	// 已存在则改为更新，避免唯一键冲突报错
+	if err := c.Insert(); err != nil {
+		return m.Update(key, value)
+	}
+
+	return nil
+}

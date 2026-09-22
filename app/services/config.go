@@ -126,3 +126,31 @@ func (this *Config) Set(key string, value string) error {
 func (this *Config) GetAll() map[string]string {
 	return this.cfg
 }
+
+// SetOrCreate 写入配置，键不存在时创建
+//
+// Set 对未知键会静默返回 nil（不报错也不写入），这在新增配置项时
+// 容易造成「保存成功但值没变」的困惑。需要动态新增配置项时用本方法。
+func (this *Config) SetOrCreate(key, value string) error {
+	this.Lock()
+	_, exists := this.cfg[key]
+	if exists {
+		this.cfg[key] = value
+	}
+	this.Unlock()
+
+	if !exists {
+		// 交由模型层插入
+		if err := models.ConfigModel.InsertKey(key, value); err != nil {
+			return err
+		}
+
+		this.Lock()
+		this.cfg[key] = value
+		this.Unlock()
+
+		return nil
+	}
+
+	return models.ConfigModel.Update(key, value)
+}

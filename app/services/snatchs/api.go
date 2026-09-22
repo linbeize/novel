@@ -208,7 +208,7 @@ func (this *ApiSnatch) FindNovel(provider *models.SnatchRule, kw string) (*Snatc
 	nov := models.NewNovel()
 	nov.Name = b.Title
 	nov.Author = b.Author
-	nov.Desc = b.Intro
+	nov.Desc = clipDesc(b.Intro)
 
 	// 搜索接口只返回 id/title/author/intro，缺少分类、状态、最新章节，
 	// 故再取一次详情补齐。失败不影响搜索结果的返回。
@@ -257,7 +257,7 @@ func (this *ApiSnatch) GetNovel(provider *models.SnatchRule, rawurl string) (*Sn
 	nov.Author = b.Author
 	nov.CateName = b.SortName
 	nov.CateId = mapCateId(provider, b.SortName)
-	nov.Desc = b.Intro
+	nov.Desc = clipDesc(b.Intro)
 	nov.ChapterTitle = b.LastChapter
 	nov.Cover = coverURL(b.Id)
 
@@ -416,6 +416,44 @@ func parseChapterLink(rawurl string) (int, int, error) {
 	return bookId, chapNo, nil
 }
 
+// 简介字段的字符上限
+//
+// 与 models.Novel 的 orm 定义（size(2555)）保持一致。
+// 站点上确有超长简介（实测见 2798 字符），直接入库会报
+// "Data too long for column 'desc'"，导致整本书采集失败。
+const maxDescLen = 2555
+
+// clipDesc 按字段上限截断简介
+//
+// 上限由设置项 BqglllMaxDesc 控制，默认等于字段定义（varchar(2555)）。
+// 按字符（rune）而非字节截断：字段限制的是字符数，
+// 按字节截会把多字节汉字截断成乱码。
+func clipDesc(s string) string {
+	limit := bqglll.CurrentSettings().MaxDesc
+	if limit <= 0 || limit > maxDescLen {
+		limit = maxDescLen
+	}
+
+	r := []rune(strings.TrimSpace(s))
+	if len(r) <= limit {
+		return string(r)
+	}
+
+	// 截断处尽量落在句末，避免出现半句话
+	cut := limit
+	for i := limit - 1; i > limit-120 && i > 0; i-- {
+		switch r[i] {
+		case '。', '！', '？', '…', '；', '.':
+			cut = i + 1
+		}
+		if cut != maxDescLen {
+			break
+		}
+	}
+
+	return string(r[:cut])
+}
+
 // mapCateId 按规则的分类映射表把站点分类名转为本地分类 ID
 //
 // 该站的分类名与本地的并不一致（如站点「玄幻奇幻」对应本地「玄幻魔法」），
@@ -445,11 +483,17 @@ func mapCateId(provider *models.SnatchRule, cateName string) uint32 {
 		}
 	}
 
-	// 未命中：用默认分类，保证仍能入库（Save 会校验 CateId 非空）
-	log.Debug(fmt.Sprintf("[%s]分类未映射: %q，用默认 ID=%d",
-		provider.Code, cateName, DEF_CATE_ID))
+	// 未命中：用兜底分类，保证仍能入库（Save 会校验 CateId 非空）。
+	// 兜底 ID 由设置项 BqglllDefaultCate 控制。
+	def := bqglll.CurrentSettings().DefaultCate
+	if def == 0 {
+		def = DEF_CATE_ID
+	}
 
-	return DEF_CATE_ID
+	log.Debug(fmt.Sprintf("[%s]分类未映射: %q，用兜底 ID=%d",
+		provider.Code, cateName, def))
+
+	return def
 }
 
 // coverURL 按站点规则拼出封面地址
@@ -508,4 +552,24 @@ func SetApiPaceProvider(f func() (time.Duration, time.Duration)) {
 // SetApiProxyProvider 注入代理提供者
 func SetApiProxyProvider(f func() string) {
 	bqglll.SetProxyProvider(f)
+}
+
+/* ---------- 采集源设置转发 ---------- */
+
+// ApiSettings 接口型采集器的可调参数（供 services 侧构造）
+type ApiSettings = bqglll.Settings
+
+// DefaultApiSettings 默认参数
+func DefaultApiSettings() ApiSettings {
+	return bqglll.DefaultSettings()
+}
+
+// SetApiSettingsProvider 注入设置提供者
+func SetApiSettingsProvider(f func() ApiSettings) {
+	bqglll.SetSettingsProvider(f)
+}
+
+// ApiSettingsNow 取当前设置（供其它模块查询）
+func ApiSettingsNow() ApiSettings {
+	return bqglll.CurrentSettings()
 }

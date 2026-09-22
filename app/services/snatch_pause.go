@@ -57,7 +57,7 @@ var PauseService = &pauseService{}
 func (this *pauseService) PauseIfPoisoned(source, reason, sample string) bool {
 	// 阈值判断由 snatchs 包的跟踪器负责：连续命中达阈值才暂停，
 	// 避免偶发一次异常就中断整个采集。
-	if snatchs.GetPoisonStatus(source).Streak < snatchs.PoisonThreshold {
+	if snatchs.GetPoisonStatus(source).Streak < snatchs.PoisonThreshold() {
 		return false
 	}
 
