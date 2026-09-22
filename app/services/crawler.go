@@ -182,7 +182,15 @@ func (this *Crawler) runCrawler(baseURL *url.URL, referer string) {
 		uri, _ := s.Attr("href")
 		u, err := this.genrateURL(baseURL, uri)
 		if err != nil {
-			log.Warn("采集URL不可用：", uri, u, err)
+			// 页面上的 javascript: / mailto: / 站外链接属预期情况
+			// （如「返回上一页」按钮），每个页面都会出现若干条。
+			// 用 Warn 会导致日志被大量刷屏，真正的问题反而被淹没，
+			// 因此这类按 Debug 记录；其余（解析失败等）仍按 Warn。
+			if err == ErrInvalidURL || err == ErrNotCurrSiteURL {
+				log.Debug("跳过链接：", uri, err)
+			} else {
+				log.Warn("采集URL不可用：", uri, u, err)
+			}
 			return
 		}
 
