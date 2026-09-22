@@ -127,24 +127,116 @@ func (this *Snatch) IsCrawlerURL(source, rawurl string) bool {
 	return this.c.IsCrawlerURL(provider, rawurl)
 }
 
-// 查找小说列表
+// 查找小说列表（跨站聚合搜索）
+//
+// 给出各采集站的结果供挑选。相比早先的实现有三点改动：
+//
+//  1. 并行搜索：各站互不依赖，串行时总耗时等于各站之和
+//     （实测 6 个站约 20-40 秒），并行后取决于最慢的那个站。
+//
+//  2. 每站返回多条：只有第一条时常漏掉用户真正要的那本
+//     （搜「斗破苍穹」第一条可能是《斗破苍穹之召唤帝》），
+//     故改为返回该站的前若干条。
+//
+//  3. 记录站点名：原实现只填了 Source（代号），页面上想显示
+//     「来自哪个站」时取不到中文名，这里一并填入。
 func (this *Snatch) FindNovels(kw string) []*snatchs.SnatchInfo {
-	providers := SnatchRuleService.GetSnatchs()
-	var list []*snatchs.SnatchInfo
-	for _, provider := range providers {
-		var info *snatchs.SnatchInfo
-		var err error
-		if this.isAPI(provider) {
-			info, err = this.api.FindNovel(provider, kw)
-		} else {
-			info, err = this.c.FindNovel(provider, kw)
-		}
-		if err == nil {
-			list = append(list, info)
+	// 只搜索已启用的站点：失效/停用的规则搜了也是白耗时间
+	allProviders := SnatchRuleService.GetSnatchs()
+
+	providers := make([]*models.SnatchRule, 0, len(allProviders))
+	for _, p := range allProviders {
+		if p.State == 1 {
+			providers = append(providers, p)
 		}
 	}
 
+	if len(providers) == 0 {
+		return nil
+	}
+
+	// 每个站最多取多少条
+	const perSite = 20
+
+	chans := make([]chan resultSet, 0, len(providers))
+
+	for _, provider := range providers {
+		ch := make(chan resultSet, 1)
+		chans = append(chans, ch)
+
+		go func(p *models.SnatchRule) {
+			// 单站限时：站点失效时会长时间等待连接超时（实测 18-19 秒），
+			// 而搜索是并行进行的，总耗时取决于最慢的站。
+			// 这里给每个站设上限，超时即放弃该站结果。
+			done := make(chan resultSet, 1)
+
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						log.Warn("搜索采集站异常:", p.Code, " ", r)
+						done <- resultSet{}
+					}
+				}()
+				done <- searchOneSite(this, p, kw, perSite)
+			}()
+
+			select {
+			case r := <-done:
+				ch <- r
+			case <-time.After(searchTimeout):
+				log.Debug("搜索站点超时:", p.Code)
+				ch <- resultSet{}
+			}
+		}(provider)
+	}
+
+	var list []*snatchs.SnatchInfo
+	for _, ch := range chans {
+		r := <-ch
+		list = append(list, r.list...)
+	}
+
 	return list
+}
+
+// searchTimeout 单个站点的搜索时限
+//
+// 取 8 秒：正常站点实测 1-4 秒，留有余量；
+// 失效站点（如已停运的 biqtxt，连接超时需 18-19 秒）则被截断。
+const searchTimeout = 8 * time.Second
+
+// resultSet 单站搜索结果
+type resultSet struct {
+	list []*snatchs.SnatchInfo
+}
+
+// searchOneSite 搜索单个站点（供 FindNovels 并行调用）
+func searchOneSite(svc *Snatch, p *models.SnatchRule, kw string, perSite int) resultSet {
+	var (
+		items []*snatchs.SnatchInfo
+		err   error
+	)
+
+	if svc.isAPI(p) {
+		items, err = svc.api.FindNovelList(p, kw, perSite)
+	} else {
+		// HTML 站点的搜索页通常只给一条最匹配的结果，
+		// 但改版站点（如 bqgnovels）已切到 JSON 接口，
+		// 由 FindNovelList 内部判断并可能返回多条。
+		items, err = svc.c.FindNovelList(p, kw, perSite)
+	}
+
+	if err != nil {
+		log.Debug("搜索站点无结果:", p.Code, " ", err.Error())
+		return resultSet{}
+	}
+
+	// 补站点名，便于页面展示
+	for _, it := range items {
+		it.SiteName = p.Name
+	}
+
+	return resultSet{list: items}
 }
 
 // 查找小说

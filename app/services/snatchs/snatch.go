@@ -137,12 +137,19 @@ var (
 
 // 采集内容信息
 type SnatchInfo struct {
-	UseTime    time.Duration
-	Title      string
-	Nov        *models.Novel
-	Chap       *models.Chapter
-	Url        string
-	Source     string
+	UseTime time.Duration
+	Title   string
+	Nov     *models.Novel
+	Chap    *models.Chapter
+	Url     string
+
+	// Source 采集规则代号（如 bqgnovels）
+	Source string
+
+	// SiteName 采集站中文名，用于界面展示「来自哪个站」。
+	// 原模板取的是 .Title（该字段实际为空），站点名显示不出来，故单独补充。
+	SiteName string
+
 	ChapterUrl string
 	NextUrl    string
 	PreUrl     string
@@ -213,6 +220,19 @@ func (this *Snatch) IsCrawlerURL(provider *models.SnatchRule, rawurl string) boo
 func (this *Snatch) FindNovel(provider *models.SnatchRule, kw string) (*SnatchInfo, error) {
 	if provider == nil {
 		return nil, ErrNotProvider
+	}
+
+	// 部分站点改版后原搜索地址失效（但采集链路仍可用），
+	// 此时改走其 JSON 接口搜索。见 search_api.go 的说明。
+	if isDeadBqgnovelsSearch(provider) {
+		list, err := this.searchBqgnovelsViaAPI(provider, kw, 1)
+		if err != nil {
+			return nil, err
+		}
+		if len(list) == 0 {
+			return nil, ErrNotNovURL
+		}
+		return list[0], nil
 	}
 
 	t1 := time.Now()
@@ -986,4 +1006,25 @@ func (this *Snatch) genrateURL(base *url.URL, rawurl string) (string, error) {
 	}
 
 	return base.ResolveReference(u).String(), nil
+}
+
+// FindNovelList 搜索并返回多条结果
+//
+// 供后台「搜索采集站」页面聚合展示用。HTML 站点的搜索页通常只给一条
+// 最匹配的结果，因此除接口型站点外，其余站点仍只返回一条。
+func (this *Snatch) FindNovelList(provider *models.SnatchRule, kw string, limit int) ([]*SnatchInfo, error) {
+	if provider == nil {
+		return nil, ErrNotProvider
+	}
+
+	if isDeadBqgnovelsSearch(provider) {
+		return this.searchBqgnovelsViaAPI(provider, kw, limit)
+	}
+
+	one, err := this.FindNovel(provider, kw)
+	if err != nil {
+		return nil, err
+	}
+
+	return []*SnatchInfo{one}, nil
 }

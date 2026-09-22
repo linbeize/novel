@@ -16,10 +16,12 @@ package admin
 
 import (
 	"strings"
+	"time"
 
 	"github.com/vckai/novel/app/controllers"
 	"github.com/vckai/novel/app/models"
 	"github.com/vckai/novel/app/services"
+	"github.com/vckai/novel/app/services/snatchs"
 	"github.com/vckai/novel/app/utils/log"
 )
 
@@ -134,10 +136,61 @@ func (this *NovelController) FindSnatchs() {
 		this.Msg("请输入小说/作者名称")
 	}
 
+	t0 := time.Now()
+
 	novs := services.SnatchService.FindNovels(kw)
+
+	// 按站点分组，便于页面上分站对比
+	type siteGroup struct {
+		Site  string
+		Count int
+		Items []*snatchs.SnatchInfo
+	}
+
+	order := make([]string, 0)
+	byName := map[string]*siteGroup{}
+
+	for _, n := range novs {
+		name := n.SiteName
+		if name == "" {
+			name = n.Source
+		}
+
+		g, ok := byName[name]
+		if !ok {
+			g = &siteGroup{Site: name}
+			byName[name] = g
+			order = append(order, name)
+		}
+
+		g.Items = append(g.Items, n)
+		g.Count++
+	}
+
+	groups := make([]*siteGroup, 0, len(order))
+	for _, name := range order {
+		groups = append(groups, byName[name])
+	}
+
+	// 已在站内的书名（用于标注「已收录」，避免重复采集）
+	existing := map[string]bool{}
+	for _, n := range novs {
+		if n.Nov == nil {
+			continue
+		}
+		if got := services.NovelService.GetByName(n.Nov.Name); got != nil && got.Id > 0 {
+			existing[n.Nov.Name] = true
+		}
+	}
+
 	this.Data["Cates"] = services.CateService.GetAll()
-	this.Data["Novs"] = novs
+	this.Data["Groups"] = groups
 	this.Data["NovsCount"] = len(novs)
+	this.Data["SiteCount"] = len(groups)
+	this.Data["Existing"] = existing
+	this.Data["Kw"] = kw
+	this.Data["Elapsed"] = time.Since(t0).Round(time.Millisecond).String()
+
 	this.View("novel/find_snatch.tpl")
 }
 
