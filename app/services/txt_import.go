@@ -60,6 +60,18 @@ var txtHeaderRe = regexp.MustCompile(
 	`^\s*(第\s*[0-9一二三四五六七八九十百千万零两]+\s*[章节回卷部篇]|序[章言]|楔子|引子|前言|后记|尾声|番外|终章|大结局)`,
 )
 
+// txtNumHeaderRe 纯数字编号的章节标题
+//
+// 部分整理版 txt 用「1 标题」「2计退侯三」这类写法（无「第」「章」二字），
+// 且常以 ------------ 分隔线包围。实测知轩藏书合集里约 6% 的书是这种格式。
+//
+// 为避免把正文里的数字（如「2012年12月21日，24点。」）误判为标题，
+// 该规则只在「前一行是分隔线或空行」时启用（见 ParseTXT 中的判断）。
+var txtNumHeaderRe = regexp.MustCompile(`^\s*(\d{1,4})\s*(\S.{0,40})$`)
+
+// txtSepRe 连续的分隔线（---- / ====）
+var txtSepRe = regexp.MustCompile(`^\s*[-=]{4,}\s*$`)
+
 // txtVolRe 分卷标题（单独成行的「第N卷 ...」）
 //
 // 分卷标题不作为章节，但其后的内容归属下一章，故解析时跳过该行。
@@ -102,6 +114,12 @@ func ParseTXT(r io.Reader) ([]ChapterParseResult, error) {
 		chapters []ChapterParseResult
 		cur      *ChapterParseResult
 		body     strings.Builder
+
+		// 上一行是否为分隔线或空行——数字标题只在此后出现时才算标题
+		prevBlankOrSep = true
+
+		// 是否已开始收集正文（用于判断首个标题之前的内容应丢弃）
+		started = false
 	)
 
 	flush := func() {
@@ -122,18 +140,39 @@ func ParseTXT(r io.Reader) ([]ChapterParseResult, error) {
 			if cur != nil {
 				body.WriteString("\n")
 			}
+			prevBlankOrSep = true
+			continue
+		}
+
+		// 分隔线：仅用于帮助识别数字标题，不入正文
+		if txtSepRe.MatchString(trimmed) {
+			prevBlankOrSep = true
 			continue
 		}
 
 		// 分卷标题：跳过，不新建章节
 		if txtVolRe.MatchString(trimmed) && !txtHeaderRe.MatchString(trimmed) {
+			prevBlankOrSep = false
 			continue
 		}
 
-		// 是否章节标题
+		// 章节标题（两种形态）
+		isTitle := false
+
 		if isTXTChapterTitle(trimmed) {
+			// 形态一：「第N章 xxx」「序章」等
+			isTitle = true
+		} else if prevBlankOrSep && isTXTNumTitle(trimmed) {
+			// 形态二：「N标题」（纯数字编号）
+			// 只在前面是空行/分隔线时启用，避免正文里的数字被当成标题
+			isTitle = true
+		}
+
+		if isTitle {
 			flush()
 			cur = &ChapterParseResult{Title: trimmed}
+			started = true
+			prevBlankOrSep = false
 			continue
 		}
 
@@ -141,10 +180,12 @@ func ParseTXT(r io.Reader) ([]ChapterParseResult, error) {
 		if cur != nil {
 			body.WriteString(line)
 			body.WriteString("\n")
-		} else {
+		} else if !started {
 			// 首个标题之前的内容（封面文案、书名、简介等）丢弃
 			continue
 		}
+
+		prevBlankOrSep = false
 	}
 
 	flush()
@@ -176,13 +217,13 @@ func isTXTChapterTitle(line string) bool {
 		return false
 	}
 
-	// 标题不应以句末标点结尾（那种多是正文里提到「第一章」的长句）
-	switch r[len(r)-1] {
-	case '。', '！', '？', '；', '，', '、', '…':
-		return false
-	}
-
 	// 标题中不应含「。」——含则基本可判定是被截断的正文
+	//
+	// 注意：不能用「以！？等结尾」来判断。实测不少书的章节标题本身就带
+	// 感叹号或问号（如「第2章 毁尸灭迹！」「第3章 坑爹啊！」），
+	// 若按结尾标点过滤会把这些章节整段并入上一章。
+	// 「。」则不同：标题极少以句号结尾，而正文句子几乎都以句号收尾，
+	// 因此只排除含句号的情况。
 	if strings.Contains(line, "。") {
 		return false
 	}
@@ -192,21 +233,104 @@ func isTXTChapterTitle(line string) bool {
 
 // decodeTXT 探测并解码 txt 内容
 //
-// 顺序：UTF-8 校验 → 失败则按 GB18030（兼容 GBK/GB2312）。
+// 按以下顺序尝试：
+//  1. BOM 明确标识的 UTF-16（知轩藏书等整理版 txt 多为 UTF-16LE）
+//  2. UTF-8 校验通过则按 UTF-8
+//  3. 否则按 GB18030（兼容 GBK/GB2312）
+//
+// 之所以要先看 BOM：UTF-16 内容的字节流里大量出现 0x00，
+// 而 ASCII 字符在 UTF-16LE 下形如 x-NUL，若按单字节编码解读
+// 会得到可读但错乱的文本（不会触发 UTF-8 校验失败），必须靠 BOM 区分。
 func decodeTXT(raw []byte) string {
-	// 去掉 UTF-8 BOM
-	raw = bytes.TrimPrefix(raw, []byte{0xEF, 0xBB, 0xBF})
+	// 1. UTF-16 with BOM
+	if len(raw) >= 2 {
+		switch {
+		case raw[0] == 0xFF && raw[1] == 0xFE:
+			return decodeUTF16(raw[2:], true)
+		case raw[0] == 0xFE && raw[1] == 0xFF:
+			return decodeUTF16(raw[2:], false)
+		}
+	}
 
+	// 无 BOM 时的启发式判断：前若干字节中 0x00 占比很高，说明是 UTF-16
+	if looksLikeUTF16(raw) {
+		// 通过 0x00 的位置判断字节序：
+		// LE 时 ASCII 形如 x-NUL（奇数位为 0），BE 反之。
+		le, be := 0, 0
+		limit := len(raw)
+		if limit > 512 {
+			limit = 512
+		}
+		for i := 0; i+1 < limit; i += 2 {
+			if raw[i+1] == 0 {
+				le++
+			}
+			if raw[i] == 0 {
+				be++
+			}
+		}
+		return decodeUTF16(raw, le >= be)
+	}
+
+	// 2. UTF-8
+	raw = bytes.TrimPrefix(raw, []byte{0xEF, 0xBB, 0xBF})
 	if utf8.Valid(raw) {
 		return string(raw)
 	}
 
+	// 3. GB18030
 	dec := mahonia.NewDecoder("GB18030")
 	if dec == nil {
 		return string(raw)
 	}
 
 	return dec.ConvertString(string(raw))
+}
+
+// decodeUTF16 解码 UTF-16 内容（le 为 true 表示小端）
+func decodeUTF16(raw []byte, le bool) string {
+	dec := mahonia.NewDecoder("utf-16")
+	if dec == nil {
+		return string(raw)
+	}
+
+	// mahonia 的 utf-16 解码器按 BOM 判断字节序，
+	// 因此这里补回 BOM 再交给它处理，避免自行拼接 surrogate pair 出错。
+	var b []byte
+	if le {
+		b = append([]byte{0xFF, 0xFE}, raw...)
+	} else {
+		b = append([]byte{0xFE, 0xFF}, raw...)
+	}
+
+	out := dec.ConvertString(string(b))
+
+	// 去掉可能残留的 BOM 字符
+	return strings.TrimPrefix(out, "\ufeff")
+}
+
+// looksLikeUTF16 判断是否为无 BOM 的 UTF-16
+//
+// 依据：文本前若干字节中 0x00 占比很高（ASCII 与中文在 UTF-16 下
+// 都会产生 0x00 字节），而普通单字节编码的文本几乎不含 0x00。
+func looksLikeUTF16(raw []byte) bool {
+	if len(raw) < 16 {
+		return false
+	}
+
+	limit := len(raw)
+	if limit > 512 {
+		limit = 512
+	}
+
+	nulls := 0
+	for i := 0; i < limit; i++ {
+		if raw[i] == 0 {
+			nulls++
+		}
+	}
+
+	return nulls*100/limit > 25
 }
 
 // TextToHTML 把纯文本正文转为库中统一的 HTML 片段格式
@@ -307,6 +431,37 @@ func looksLikeAuthor(s string) bool {
 		default:
 			return false
 		}
+	}
+
+	return true
+}
+
+// isTXTNumTitle 判断是否为「N标题」形态的数字编号章节
+//
+// 判据偏保守，避免把正文里的数字误判成标题：
+//   - 数字 1-4 位（章号不会太长）
+//   - 数字后须有标题文字（纯数字行不算）
+//   - 整行不超过 45 字
+//   - 不含句末标点（含则多半是正文）
+func isTXTNumTitle(line string) bool {
+	m := txtNumHeaderRe.FindStringSubmatch(line)
+	if m == nil {
+		return false
+	}
+
+	title := strings.TrimSpace(m[2])
+	if title == "" {
+		return false
+	}
+
+	r := []rune(line)
+	if len(r) > 45 {
+		return false
+	}
+
+	switch r[len(r)-1] {
+	case '。', '！', '？', '；', '，', '、', '…', '”', '’':
+		return false
 	}
 
 	return true

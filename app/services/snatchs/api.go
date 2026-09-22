@@ -573,3 +573,54 @@ func SetApiSettingsProvider(f func() ApiSettings) {
 func ApiSettingsNow() ApiSettings {
 	return bqglll.CurrentSettings()
 }
+
+/*
+FindNovelList 搜索并返回该站的多条结果
+=====================================
+
+原有 FindNovel 只取第一条，用于「添加采集点」这一场景（用户给定书名，
+取最匹配的一条即可）。但后台的「搜索采集站」页面需要把各站的结果
+聚合给用户挑选，只返回一条会导致：
+
+  - 搜「斗破苍穹」时，若该站第一条是《斗破苍穹之召唤帝》，真正的
+    《斗破苍穹》就被漏掉，用户以为这个站没有这本书
+  - 无法在同一站的不同版本（如全本/精校版）之间选择
+
+因此新增本方法返回全部结果。limit <= 0 时默认取 20 条。
+*/
+func (this *ApiSnatch) FindNovelList(provider *models.SnatchRule, kw string, limit int) ([]*SnatchInfo, error) {
+	if provider == nil {
+		return nil, ErrNotProvider
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+
+	books, err := this.client.Search(kw)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]*SnatchInfo, 0, len(books))
+
+	for i, b := range books {
+		if i >= limit {
+			break
+		}
+
+		nov := models.NewNovel()
+		nov.Name = b.Title
+		nov.Author = b.Author
+		nov.Desc = clipDesc(b.Intro)
+		nov.Cover = coverURL(b.Id)
+
+		out = append(out, &SnatchInfo{
+			Nov:        nov,
+			Url:        buildLink(b.Id),
+			Source:     provider.Code,
+			ChapterUrl: buildLink(b.Id),
+		})
+	}
+
+	return out, nil
+}
