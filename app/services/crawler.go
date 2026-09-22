@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/vckai/novel/app/services/snatchs"
 	"io"
 	"net/url"
 	"strings"
@@ -141,6 +142,27 @@ func (this *Crawler) run() {
 	// 爬虫执行爬取URL地址
 	go func() {
 		t1 := time.Now()
+
+		// 该站点是 SPA：分类页服务端只渲染 15 本，更多内容由前端 JS
+		// 调 /json 接口加载。通用 HTML 爬虫抓不到这部分，因此先用
+		// 接口把分类页翻完，再进行常规爬取。
+		//
+		// 只走 7 个正式分类，不碰排行榜——实测排行榜混有大量非小说内容。
+		if snatchs.IsAPI(this.provider) {
+			n := SnatchService.CrawlCategories(this.provider.Code, func(link string) bool {
+				if this.bookURLs.TestString(link) {
+					return false
+				}
+				this.bookURLs.AddString(link)
+				this.countBookURL++
+
+				this.linkChans[this.provider.Code] <- link
+				return true
+			})
+			log.Info("分类页采集完成，共发现", n, "本，耗时:", time.Since(t1))
+		}
+
+		// 常规 HTML 爬取（首页、分类页首屏等）
 		this.runCrawler(this.initURL, "")
 		log.Info("URL爬虫，采集URL:", this.countURL, "，采集小说URL:", this.countBookURL, "，耗时:", time.Since(t1))
 

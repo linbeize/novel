@@ -68,8 +68,34 @@ func NewSnatch() *Snatch {
 	}
 
 	snatchs.SetPaceProvider(pace)
-	snatchs.SetApiPaceProvider(pace)
 	snatchs.SetApiProxyProvider(proxy)
+
+	// 接口型采集器（bqglll）的可调参数：读取后台「采集源设置」中的配置。
+	// 每次调用实时读取，故后台改完即时生效，无需重启。
+	// 投毒判定的阈值同样由后台设置控制
+	snatchs.SetPoisonThresholdProvider(func() int {
+		d := snatchs.DefaultApiSettings()
+		return int(ConfigService.Int64("BqglllPoisonThreshold", int64(d.PoisonThreshold)))
+	})
+
+	snatchs.SetApiSettingsProvider(func() snatchs.ApiSettings {
+		d := snatchs.DefaultApiSettings()
+
+		get := func(key string, def int) int {
+			return int(ConfigService.Int64(key, int64(def)))
+		}
+
+		return snatchs.ApiSettings{
+			IntervalMs:      get("BqglllInterval", d.IntervalMs),
+			JitterMs:        get("BqglllJitter", d.JitterMs),
+			TimeoutSec:      get("BqglllTimeout", d.TimeoutSec),
+			Retry:           get("BqglllRetry", d.Retry),
+			MaxDesc:         get("BqglllMaxDesc", d.MaxDesc),
+			DefaultCate:     uint32(get("BqglllDefaultCate", int(d.DefaultCate))),
+			PoisonCheck:     ConfigService.Bool("BqglllPoisonCheck", d.PoisonCheck),
+			PoisonThreshold: get("BqglllPoisonThreshold", d.PoisonThreshold),
+		}
+	})
 
 	return &Snatch{
 		c: snatchs.NewSnatch(func() string {
@@ -308,4 +334,20 @@ func DownImg(rawurl string) (string, error) {
 	_, err = io.Copy(f, rc)
 
 	return uploadDir + newName, err
+}
+
+// CrawlCategories 批量采集某站点的分类页（仅接口型采集器支持）
+//
+// 用于 SPA 站点：其分类页内容由前端 JS 从接口加载，通用 HTML 爬虫
+// 抓不到。返回值为发现的书籍数。
+func (this *Snatch) CrawlCategories(source string, found func(link string) bool) int {
+	provider := SnatchRuleService.GetByCode(source)
+	if provider == nil {
+		return 0
+	}
+	if !snatchs.IsAPI(provider) {
+		return 0
+	}
+
+	return this.api.CrawlCategories(found)
 }

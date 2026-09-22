@@ -45,7 +45,7 @@ var apiHosts = []string{
 	"https://apige.cc",
 }
 
-// 请求超时
+// 请求超时（原为固定值，现由设置项 BqglllTimeout 控制，见 getSettings）
 const requestTimeout = 20 * time.Second
 
 // 章节页正文在接口中按固定长度切片返回，单次上限未知；
@@ -244,8 +244,13 @@ func (c *Client) fetch(rawurl string) ([]byte, error) {
 	throttle := utils.ThrottleInstance()
 	interval, jitter := snatchPace()
 
+	retry := getSettings().Retry
+	if retry <= 0 {
+		retry = 1 // 至少请求一次
+	}
+
 	var lastErr error
-	for attempt := 0; attempt < 3; attempt++ {
+	for attempt := 0; attempt < retry; attempt++ {
 		throttle.Wait(rawurl, interval, jitter)
 
 		body, err := c.do(rawurl)
@@ -266,9 +271,11 @@ func (c *Client) fetch(rawurl string) ([]byte, error) {
 
 // do 实际发起一次 HTTP 请求
 func (c *Client) do(rawurl string) ([]byte, error) {
+	to := time.Duration(getSettings().TimeoutSec) * time.Second
+
 	client := xhttp.NewClient(&xhttp.ClientConfig{
-		Timeout:   requestTimeout,
-		Dial:      requestTimeout,
+		Timeout:   to,
+		Dial:      to,
 		KeepAlive: 60 * time.Second,
 		ProxyURL:  proxyURL(),
 	})
@@ -299,8 +306,12 @@ func snatchPace() (time.Duration, time.Duration) {
 	if paceProvider != nil {
 		return paceProvider()
 	}
-	// 默认：1.5 秒间隔 + 0.8 秒抖动
-	return 1500 * time.Millisecond, 800 * time.Millisecond
+
+	// 未注入时用设置项里的默认值（该站响应较慢，间隔比通用默认更宽）
+	s := getSettings()
+
+	return time.Duration(s.IntervalMs) * time.Millisecond,
+		time.Duration(s.JitterMs) * time.Millisecond
 }
 
 // proxyURL 取代理地址（同样由外部注入，避免循环依赖）
@@ -338,3 +349,135 @@ func (c *Client) FetchPage(rawurl string) (string, error) {
 	}
 	return string(body), nil
 }
+
+/* ---------- 采集源设置 ---------- */
+
+/*
+Settings 采集源可调参数
+======================
+
+由 services 侧从数据库配置读取后注入。放在这里而不是直接读配置的原因：
+本包被 services 依赖，直接引用会形成循环，故沿用 provider 注入模式。
+*/
+type Settings struct {
+	// 采集节奏
+	IntervalMs int // 请求间隔（毫秒）
+	JitterMs   int // 间隔抖动（毫秒）
+	TimeoutSec int // 单次请求超时（秒）
+	Retry      int // 失败重试次数
+
+	// 内容处理
+	MaxDesc     int    // 简介最大长度（字符）
+	DefaultCate uint32 // 分类未匹配时的兜底 ID
+
+	// 投毒防护
+	PoisonCheck     bool // 是否启用投毒检测
+	PoisonThreshold int  // 连续命中多少次暂停
+}
+
+// DefaultSettings 默认值（配置缺失时使用）
+func DefaultSettings() Settings {
+	return Settings{
+		IntervalMs:      2500,
+		JitterMs:        1200,
+		TimeoutSec:      30,
+		Retry:           3,
+		MaxDesc:         2555,
+		DefaultCate:     13,
+		PoisonCheck:     true,
+		PoisonThreshold: 3,
+	}
+}
+
+var settingsProvider func() Settings
+
+// SetSettingsProvider 注入设置提供者（在 services 包中调用）
+func SetSettingsProvider(f func() Settings) {
+	settingsProvider = f
+}
+
+// getSettings 取当前设置
+func getSettings() Settings {
+	if settingsProvider == nil {
+		return DefaultSettings()
+	}
+
+	s := settingsProvider()
+
+	// 兜底：任一为 0 时回落到默认值，避免配置缺失导致行为异常
+	d := DefaultSettings()
+	if s.IntervalMs <= 0 {
+		s.IntervalMs = d.IntervalMs
+	}
+	if s.TimeoutSec <= 0 {
+		s.TimeoutSec = d.TimeoutSec
+	}
+	if s.Retry < 0 {
+		s.Retry = d.Retry
+	}
+	if s.MaxDesc <= 0 || s.MaxDesc > 2555 {
+		s.MaxDesc = d.MaxDesc
+	}
+	if s.DefaultCate == 0 {
+		s.DefaultCate = d.DefaultCate
+	}
+	if s.PoisonThreshold <= 0 {
+		s.PoisonThreshold = d.PoisonThreshold
+	}
+
+	return s
+}
+
+// CurrentSettings 取当前生效的设置（供外部查询）
+func CurrentSettings() Settings {
+	return getSettings()
+}
+
+/* ---------- 分类页接口 ---------- */
+
+// SortItem /json 接口返回的单个条目
+type SortItem struct {
+	URLList     string `json:"url_list"`    // SEO 页面地址
+	URLImg      string `json:"url_img"`     // 封面图（含内部 ID）
+	ArticleName string `json:"articlename"` // 书名（站点用无下划线写法）
+	Author      string `json:"author"`      // 作者
+	Intro       string `json:"intro"`       // 简介
+}
+
+// GetSortPage 取分类页的一页数据
+//
+// 该站的分类页服务端只渲染 15 本，更多内容由前端 JS 调本接口加载。
+// 因此要批量发现书籍，必须走这里而不是解析 HTML。
+//
+// 返回空数组表示已到末页（实测约 20-30 页）。
+func (c *Client) GetSortPage(sortID, page int) ([]SortItem, error) {
+	if sortID <= 0 || page <= 0 {
+		return nil, fmt.Errorf("参数错误: sortid=%d page=%d", sortID, page)
+	}
+
+	path := fmt.Sprintf("/json?sortid=%d&page=%d", sortID, page)
+
+	raw, err := c.fetchByPage(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []SortItem
+	if err := json.Unmarshal(raw, &items); err != nil {
+		// 末页可能返回非 JSON（如空响应），按空处理而非报错
+		return nil, nil
+	}
+
+	return items, nil
+}
+
+// fetchByPage 抓取分类页接口
+//
+// 与接口请求的区别：这里请求的是站点自身页面（非 API 域名），
+// 故直接按站点地址请求，不再走 API 域名池。
+func (c *Client) fetchByPage(path string) ([]byte, error) {
+	return c.fetch(pageHost + path)
+}
+
+// pageHost 分类页接口所在域名
+const pageHost = "https://www.bqglll.cc"
