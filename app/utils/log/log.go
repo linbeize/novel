@@ -226,9 +226,38 @@ func Info(v ...interface{}) {
 
 // 调试日记
 //
-// 该级别日志量大（采集时逐条记录），生产环境可关闭以减少输出，
-// 关闭后仅不写入 beego/stdout，仍会进入内存缓冲以便后台查看。
+// 该级别日志量大（采集时逐条记录，其中多数是页面上的 javascript:/站外
+// 链接这类预期情况），生产环境默认关闭。
+//
+// 关闭时既不写控制台、也不进内存缓冲——否则后台「日志」页仍会被这些
+// 内容刷屏，等于没关。需要查看时把后台「系统设置 - 日志级别」改为
+// debug 即可（该项为空即视为非 debug）。
 func Debug(v ...interface{}) {
+	if !debugEnabled() {
+		return
+	}
 	appendRing("DEBUG", format(v...))
 	beego.Debug(v...)
+}
+
+// debugEnabled 是否记录 DEBUG 级别日志
+//
+// 由外部注入的判定函数决定（见 SetDebugProvider）。这样做的原因：
+// LogLevel 存放在数据库里，而读取它需要 services 包，本包被 services 依赖，
+// 直接引用会形成循环。因此改为注入，由启动时在 services 侧完成绑定。
+//
+// 采用每次调用求值，因此后台修改日志级别后无需重启即可生效。
+func debugEnabled() bool {
+	if debugProvider == nil {
+		return false
+	}
+	return debugProvider()
+}
+
+// debugProvider 由 SetDebugProvider 注入
+var debugProvider func() bool
+
+// SetDebugProvider 注入 DEBUG 级别的判定函数
+func SetDebugProvider(f func() bool) {
+	debugProvider = f
 }

@@ -2,6 +2,7 @@ package snatchs
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -62,6 +63,9 @@ func IsAPI(provider *models.SnatchRule) bool {
 // API 采集点的地址形如 bqglll://113680
 const apiScheme = "bqglll://"
 
+// 站点主域（SEO 页面、封面图均在此域名下）
+const providerHost = "https://www.bqglll.cc"
+
 // buildLink 由书籍 ID 生成采集点地址
 func buildLink(id string) string {
 	return apiScheme + id
@@ -93,13 +97,82 @@ func parseLink(raw string) (string, error) {
 		return s, nil
 	}
 
-	// SEO 页地址：/look/{seoId}/ ，无法直接用于接口
+	// SEO 页地址：/look/{seoId}/
+	//
+	// 该站有双轨 ID：页面 URL 用 SEO ID，接口用内部 ID，两者不同。
+	// 爬虫扫描时只能看到 SEO 地址，因此需要据此换算出内部 ID
+	// （见 resolveSEOLink）。换算要发一次请求，故在上层做。
 	if strings.Contains(s, "/look/") {
-		return "", fmt.Errorf("该地址是 SEO 页面，请改用内部 ID（可用搜索功能获取）")
+		return "", errNeedResolveSEO
 	}
 
 	return "", fmt.Errorf("无法识别的采集点: %s", s)
 }
+
+// errNeedResolveSEO 表示该地址是 SEO 页面，需先换算为内部 ID
+var errNeedResolveSEO = fmt.Errorf("需要换算 SEO 地址")
+
+// bookID 取采集点对应的内部书籍 ID
+//
+// 兼容两种写法：
+//   - bqglll://113680 或 113680  —— 已是内部 ID，直接使用
+//   - https://www.bqglll.cc/look/104952/  —— SEO 地址，需换算
+//
+// SEO 地址这一支是爬虫场景必需的：爬虫在站点里只能看到页面地址。
+func (this *ApiSnatch) bookID(rawurl string) (string, error) {
+	id, err := parseLink(rawurl)
+
+	if err == errNeedResolveSEO {
+		return this.resolveSEOLink(rawurl)
+	}
+
+	return id, err
+}
+
+// seoIDRe 从 SEO 页面地址中取出 SEO ID
+var seoIDRe = regexp.MustCompile(`/look/(\d+)`)
+
+// extractSEOPageID 从 SEO 页面地址解析出 SEO ID
+func extractSEOPageID(raw string) (string, bool) {
+	m := seoIDRe.FindStringSubmatch(raw)
+	if len(m) < 2 {
+		return "", false
+	}
+	return m[1], true
+}
+
+// resolveSEOLink 把 SEO 页面地址换算成内部 ID
+//
+// 依据：SEO 页面里的封面图路径形如 bookimg/{floor(id/1000)}/{id}.jpg，
+// 其中的 id 即接口所需的内部 ID。实测多本书均一致。
+//
+// 之所以能可靠取到：封面图是服务端直接渲染在 HTML 里的，
+// 不依赖 JS；且该路径是站点自己的图片托管规则，不会随内容变化。
+func (this *ApiSnatch) resolveSEOLink(raw string) (string, error) {
+	seoID, ok := extractSEOPageID(raw)
+	if !ok {
+		return "", fmt.Errorf("无法从地址中解析 SEO ID: %s", raw)
+	}
+
+	pageURL := providerHost + "/look/" + seoID + "/"
+	body, err := this.client.FetchPage(pageURL)
+	if err != nil {
+		return "", fmt.Errorf("获取 SEO 页面失败: %w", err)
+	}
+
+	m := coverIDRe.FindStringSubmatch(body)
+	if len(m) < 2 {
+		return "", fmt.Errorf("SEO 页面中未找到内部 ID: %s", pageURL)
+	}
+
+	innerID := m[1]
+	log.Debug(fmt.Sprintf("SEO 地址换算: %s → 内部ID=%s", raw, innerID))
+
+	return innerID, nil
+}
+
+// coverIDRe 从封面图路径中取内部 ID
+var coverIDRe = regexp.MustCompile(`bookimg/\d+/(\d+)\.jpg`)
 
 func isDigits(s string) bool {
 	if s == "" {
@@ -168,7 +241,7 @@ func (this *ApiSnatch) GetNovel(provider *models.SnatchRule, rawurl string) (*Sn
 		return nil, ErrNotProvider
 	}
 
-	id, err := parseLink(rawurl)
+	id, err := this.bookID(rawurl)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +283,7 @@ func (this *ApiSnatch) GetChapters(provider *models.SnatchRule, rawurl string) (
 		return nil, ErrNotProvider
 	}
 
-	id, err := parseLink(rawurl)
+	id, err := this.bookID(rawurl)
 	if err != nil {
 		return nil, err
 	}

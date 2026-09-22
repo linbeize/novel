@@ -50,6 +50,15 @@ func init() {
 		}
 	}
 
+	// 内存缓冲同样受日志级别控制。
+	//
+	// 上面只关掉了控制台输出；后台「运行日志」页读的是内存缓冲，
+	// 若不一并过滤，页面仍会被 DEBUG 明细（多为页面上的 javascript:/
+	// 站外链接这类预期情况）刷屏。此处注入判定函数，按 LogLevel 决定。
+	log.SetDebugProvider(func() bool {
+		return services.ConfigService.String("LogLevel") == "debug"
+	})
+
 	// 接入 ORM 日志用于 SQL 统计。
 	//
 	// 注意：本站配置存于数据库 nov_config 表，须用 services.ConfigService 读取，

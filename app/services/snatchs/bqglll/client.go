@@ -326,3 +326,15 @@ func IDToInt(s string) int {
 	fmt.Sscanf(strings.TrimSpace(s), "%d", &n)
 	return n
 }
+
+// FetchPage 抓取一个普通网页（非接口）
+//
+// 用于 SEO 页面：爬虫扫描时只能拿到 SEO 地址，需要从页面里
+// 换算接口所用的内部 ID。
+func (c *Client) FetchPage(rawurl string) (string, error) {
+	body, err := c.fetch(rawurl)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
