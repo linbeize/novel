@@ -31,6 +31,9 @@ func (this *ConfigController) Index() {
 	// 获取配置
 	this.Data["Config"] = services.ConfigService.GetAll()
 
+	// 主题列表：供模板下拉选择（避免手打主题名出错）
+	this.Data["Themes"] = services.Theme.List()
+
 	this.View("config/index.tpl")
 }
 

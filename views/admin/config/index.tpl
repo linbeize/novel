@@ -80,7 +80,16 @@ html{color: #666}
                             <span class='x-red'>*</span>PC网站模板
                         </label>
                         <div class="layui-input-block">
-                            <input type="text" name="Theme" autocomplete="off" class="layui-input" lay-verify="required" value="{{.Config.Theme}}" />
+                            <select name="Theme">
+                                {{range $i, $t := .Themes}}
+                                {{if $t.HasPC}}
+                                <option value="{{$t.Name}}" {{if eq $t.Name $.Config.Theme}}selected{{end}}>{{$t.Name}}</option>
+                                {{end}}
+                                {{end}}
+                            </select>
+                            <div class="layui-form-mid layui-word-aux">
+                                仅列出含 PC 模板的主题，可到「主题管理」新建
+                            </div>
                         </div>
                     </div>
                     <div class="layui-form-item">
@@ -88,7 +97,16 @@ html{color: #666}
                             <span class='x-red'>*</span>手机网站模板
                         </label>
                         <div class="layui-input-block">
-                            <input type="text" name="MobileTheme" autocomplete="off" class="layui-input" lay-verify="required" value="{{.Config.MobileTheme}}" />
+                            <select name="MobileTheme">
+                                {{range $i, $t := .Themes}}
+                                {{if $t.HasM}}
+                                <option value="{{$t.Name}}" {{if eq $t.Name $.Config.MobileTheme}}selected{{end}}>{{$t.Name}}</option>
+                                {{end}}
+                                {{end}}
+                            </select>
+                            <div class="layui-form-mid layui-word-aux">
+                                仅列出含移动端模板的主题
+                            </div>
                         </div>
                     </div>
                     <div class="layui-form-item">

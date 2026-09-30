@@ -104,6 +104,9 @@ func adminRouters() {
 		// TXT 导入
 		beego.NSAutoRouter(&admin.TxtImportController{}),
 
+		// 主题管理
+		beego.NSAutoRouter(&admin.ThemeController{}),
+
 		// 权限路由
 		beego.NSAutoRouter(&admin.RoleController{}),
 
