@@ -1,0 +1,179 @@
+
+<link href="{{.aOut.ViewUrl}}plugin/swiper8/swiper-bundle.min.css" rel="stylesheet" type="text/css">
+<!-- 目录分页样式位于 cate.css 的 .page-box 作用域（与分类页共用），
+     详情页此前未加载该文件，导致分页器无样式 -->
+<link href="{{.mOut.ViewUrl}}css/cate.css" rel="stylesheet" type="text/css">
+<!-- 本主题样式，放在最后覆盖基础样式 -->
+<link href="{{.mOut.ViewUrl}}css/theme.css" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="{{.aOut.ViewUrl}}plugin/swiper8/swiper-bundle.min.js" charset="utf-8"></script>
+
+<!-- container -->
+<div id="container">
+	<div id="content">
+	  <!-- section -->
+	   <div class="detail-section read-notice-sibling">
+	    <!-- ad -->
+	    <div class="ad-down">
+			<div class="swiper">
+				<div class="swiper-wrapper">
+					{{range .BannerSlices}}
+					<div class="swiper-slide">
+						<a href="{{.Link}}" target="_blank">
+							<img src="{{.Img}}" alt="{{.Name}}" height="453" width="270">
+						</a>
+					</div>
+					{{end}}
+				</div>
+				<!-- 如果需要分页器 -->
+				<div class="swiper-pagination swiper-button-white"></div>
+			</div>
+		</div>
+	    <!-- //ad -->
+	    <!-- category -->
+	    <ul class="category-lst">
+	      <li><a href="{{urlfor "home.HomeController.Index"}}" class="category-tab txtlink">首页<i></i></a></li>
+	      <li><a href="{{urlfor "home.HomeController.Cate" "id" .Nov.CateId}}" class="category-tab txtlink">{{.Nov.CateName}}<i></i></a></li>
+	      <li>{{.Nov.Name}}</li>
+	    </ul>
+	    <!-- //category -->
+	    <div class="detail-wrap">
+	      <a href="javascript:void(0);" class="detail-thumb">
+	        <i class="thumb-design"></i>
+	        <div class="thumb-animation">
+	          <div class="detail-thumb-box"><img src="{{.mOut.ViewUrl}}img/nocover.jpg" {{if ne .Nov.Cover ""}}data-echo="{{.Nov.Cover}}"{{end}} height="284" width="210" alt=""></div>
+	        </div>
+	        <i class="thumb-design2"></i>
+	      </a>
+	      <div class="detail-info">
+	        <h1 class="detail-tit">{{.Nov.Name}}</h1>
+	        <table class="detail-profile">
+	          <tbody><tr>
+	            <td><strong>作者：</strong>{{.Nov.Author}}</td>
+	            <td><strong>类型：</strong>{{.Nov.CateName}}</td>
+	          </tr>
+	          <tr>
+	            <td><strong>状态：</strong>{{.Nov.StatusName}}</td>
+	            <td><strong>字数：</strong>{{num_format .Nov.TextNum}}</td>
+	          </tr>
+	          <tr>
+	          <td>
+	          更新时间：{{datetime .Nov.UpdatedAt "2006-01-02"}}
+	          </td>
+	          </tr>
+	          <tr>
+	          <td>
+	          最新章节：<a href="{{urlfor "m.BookController.Detail" "id" .Nov.ChapterId "novid" .Nov.Id}}">{{.Nov.ChapterTitle}}</a>
+	          </td>
+	          </tr>
+	        </tbody></table>
+	        <p class="detail-description">
+	        <c id="info_short_txt">{{substr_no_html .Nov.Desc 0 64}}...</c>
+	        <c id="info_long_txt" style="display:none;">{{substr_no_html .Nov.Desc 0 200}}</c>
+	        <a href="javascript:void(0)" id="zhankaishouqi" class="btn-description"><i></i>展开</a>
+	        </p>
+	        <div class="detail-btn-wrap">
+			{{if eq .FirstChapId 0}}
+	          <a href="javascript:alert('暂无章节信息');" class="btn-read">开始阅读</a>
+			{{else}}
+	          <a href="{{urlfor "home.BookController.Detail" "id" .FirstChapId "novid" .Nov.Id}}" target="_blank" class="btn-read">开始阅读</a>
+			{{end}}
+	          <a href="javascript:addFavorite('{{.Nov.Name}}', location.href);" class="btn-keep" id="fav_btn">收藏本书</a>
+	          {{if ne (itoa .Nov.ChapterNum) ""}}
+	          <a href="{{urlfor "home.BookController.Download" "id" .Nov.Id}}" class="btn-download" id="download_btn">下载TXT</a>
+	          {{else}}
+	          <a href="javascript:alert('暂无章节，无法下载');" class="btn-download btn-disabled">下载TXT</a>
+	          {{end}}
+	        </div>
+	      </div>
+	    </div>
+	  </div>
+	  <!-- //section -->
+	  <!-- section -->
+	  <div class="detail-section">
+	    <!-- aside -->
+	    <div class="detail-aside">
+	      <h2 class="aside-tit">同类热门书籍</h2>
+	      <ul class="book-lst" id="recommUl">
+		  {{range .NovCateRanks}}
+	      	<li> 
+	      		<a href="{{urlfor "home.BookController.Index" "id" .Id}}" target="_blank" class="book-lst-tab">
+		      		<img src="{{$.mOut.ViewUrl}}img/nocover.jpg" {{if ne .Cover ""}}data-echo="{{.Cover}}"{{end}} height="100" width="75" alt="{{.Name}}">
+		      		<div class="book-lst-tit">{{.Name}}</div>
+		      		<div class="book-lst-txt book-lst-clr2">{{.CateName}}</div>
+		      		<div class="book-lst-txt">{{.Author}}</div>
+	      		</a>
+	      	</li>
+			{{end}}
+	      </ul>
+	    </div>
+
+	    <!-- //aside -->
+	    <h2 class="section-tit">目录
+	      {{if gt .CatalogTotalPage 1}}
+	      <em style="font-size:14px;font-weight:normal;color:#999;margin-left:8px;">
+	        第 {{.CatalogPage}}/{{.CatalogTotalPage}} 页（共 {{.Nov.ChapterNum}} 章）
+	      </em>
+	      {{end}}
+	    </h2>
+	    <div class="contents-lst-wrap">
+	      <ol class="contents-lst" id="contl1">
+		  {{range .Chaps}}
+	      	<li class="odd">
+	      		<a onclick="dealCurrentPageCookie()" href="{{urlfor "home.BookController.Detail" "id" .Id "novid" $.Nov.Id}}" class="contents-tab" target="_blank" title="{{.Title}}">
+	      			<span>{{.ChapterNo}}</span>{{.Title}}
+	      		</a>
+	      	</li>
+		  {{end}}
+	      </ol>
+	      <!-- 目录分页：长篇（近 2000 章）一次渲染会使页面达 500KB 以上，
+	           故每页 100 章，地址形如 /book/805/p3.html。
+	           分页样式定义在 cate.css 的 .page-box 作用域内（与分类页共用），
+	           因此这里必须用 .page-box 包裹，并确保 detail.css 已加载。 -->
+	      <div class="page-box cf">
+	         {{template "home/biquge/common/page.tpl" .}}
+	      </div>
+	    </div>
+	  </div>
+	  <!-- //section -->
+	</div>
+</div>
+<script>
+
+var len = {{.Nov.Desc|len}};
+$(function() {
+	var mySwiper = new Swiper ('.swiper', {
+		direction: 'horizontal',
+		loop: true,
+		autoplay: true,//可选选项，自动滑动
+
+		// 如果需要分页器
+        pagination: {
+          el: '.swiper-pagination',
+        }
+	})        
+
+	$('#zhankaishouqi').on('click', function() {
+		if ($("#zhankaishouqi").html() == "<i></i>收起") {
+			$("#info_short_txt").show();
+			$("#info_long_txt").hide();
+			$("#zhankaishouqi").removeClass();
+			$("#zhankaishouqi").addClass("btn-description");
+			$("#zhankaishouqi").html("<i></i>展开");
+
+		} else {
+			$("#info_short_txt").hide();
+			$("#info_long_txt").show();
+			$("#zhankaishouqi").removeClass();
+			$("#zhankaishouqi").addClass("btn-description on");
+			$("#zhankaishouqi").html("<i></i>收起");
+		}
+	});
+
+	if (len > 64) {
+	} else {
+		$("#info_short_txt").hide();
+		$("#info_long_txt").show();
+		$("#zhankaishouqi").hide();
+	}
+});
+</script>

@@ -1,0 +1,564 @@
+@charset "utf-8";
+
+/*
+笔趣阁风格主题
+==============
+
+视觉定位：传统小说站，信息密度高、加载快、以内容为主。
+与默认主题（偏现代卡片式）的差异主要在：
+
+  - 配色：主色改用经典的暗红 #c00 系；背景纯白，区块用浅灰分层
+  - 字号：整体调小一号（正文 13px），一屏能看更多书名
+  - 布局：内容区 1200px 居中，左右两栏；区块间用细分隔线而非卡片阴影
+  - 列表：书名列表改为紧凑的「卷首风格」，一行一个链接，悬停变红
+  - 章节页：正文加宽行距、首行缩进，导航空隙更大，便于长时间阅读
+
+改样式时建议只动本文件顶部的变量区，下面的规则都基于这些变量。
+*/
+
+:root {
+    /* 主色 */
+    --bq-red: #c00;
+    --bq-red-hover: #e33;
+    --bq-red-dark: #900;
+
+    /* 文字 */
+    --bq-text: #333;
+    --bq-text-2: #666;
+    --bq-text-3: #999;
+
+    /* 背景与边框 */
+    --bq-bg: #fff;
+    --bq-bg-2: #f8f8f8;
+    --bq-bg-3: #f2f2f2;
+    --bq-line: #e6e6e6;
+    --bq-line-2: #ddd;
+
+    /* 尺寸 */
+    --bq-width: 1200px;
+
+    /* 圆角（笔趣阁风格基本是直角，留 2px 免得过于锐利） */
+    --bq-radius: 2px;
+}
+
+/* ---------- 全局 ---------- */
+
+body {
+    background: var(--bq-bg);
+    color: var(--bq-text);
+    font: 13px/1.6 "Microsoft YaHei", "微软雅黑", SimSun, Arial, sans-serif;
+}
+
+a {
+    color: var(--bq-text);
+    text-decoration: none;
+    transition: color .15s;
+}
+
+a:hover {
+    color: var(--bq-red);
+}
+
+/* 统一内容区宽度 */
+.header,
+.mnavbox,
+.r-section,
+.wrap {
+    width: var(--bq-width);
+    margin: 0 auto;
+}
+
+/* ---------- 顶部 ---------- */
+
+.header-box {
+    background: var(--bq-bg);
+    border-bottom: 1px solid var(--bq-line);
+}
+
+.header {
+    height: 78px !important; /* 覆盖模板内联高度，保证与 logo 对齐 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* logo：笔趣阁风格通常不放大图标，保持原始尺寸即可 */
+.header .logo img {
+    max-height: 60px;
+    width: auto;
+}
+
+/* 搜索框：白底 + 红边按钮，是最显眼的元素 */
+.searchbox {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    margin-left: 30px;
+}
+
+.searchform {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.querybox {
+    border: 2px solid var(--bq-red);
+    border-right: none;
+    border-radius: var(--bq-radius) 0 0 var(--bq-radius);
+    background: #fff;
+    height: 36px;
+    display: flex;
+    align-items: center;
+}
+
+.querybox .query {
+    border: none;
+    outline: none;
+    width: 300px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--bq-text);
+    background: transparent;
+}
+
+.querybox .query::placeholder {
+    color: var(--bq-text-3);
+}
+
+/* 搜索按钮 */
+.sbtn1,
+.searchform input[type="submit"] {
+    height: 36px;
+    line-height: 36px;
+    padding: 0 22px;
+    background: var(--bq-red);
+    color: #fff;
+    border: none;
+    border-radius: 0 var(--bq-radius) var(--bq-radius) 0;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.searchform input[type="submit"]:hover {
+    background: var(--bq-red-hover);
+}
+
+/* 热搜词 */
+.hotwords {
+    position: absolute;
+    left: 0;
+    top: 42px;
+    font-size: 12px;
+    color: var(--bq-text-3);
+    white-space: nowrap;
+}
+
+.hotwords a {
+    color: var(--bq-text-3);
+    margin-right: 10px;
+}
+
+.hotwords a:hover {
+    color: var(--bq-red);
+}
+
+/* 右侧功能链接 */
+.header .login {
+    font-size: 12px;
+    color: var(--bq-text-3);
+    white-space: nowrap;
+}
+
+.header .login a {
+    color: var(--bq-text-2);
+}
+
+.header .login .divider {
+    margin: 0 8px;
+    color: var(--bq-line-2);
+}
+
+/* ---------- 主导航 ---------- */
+
+.mnavbox {
+    background: var(--bq-bg-2);
+    border-bottom: 2px solid var(--bq-red);
+}
+
+.mnav {
+    width: var(--bq-width) !important; /* 模板里写死了 1200 */
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mnav li {
+    line-height: 42px;
+}
+
+.mnav li a {
+    display: block;
+    padding: 0 22px;
+    font-size: 14px;
+    color: var(--bq-text);
+}
+
+.mnav li a:hover {
+    color: var(--bq-red);
+    background: #fff;
+}
+
+/* 当前分类：红底白字，是传统小说站最典型的高亮方式 */
+.mnav li.cur a,
+.mnav li.cur > a {
+    background: var(--bq-red);
+    color: #fff;
+}
+
+.mnav li.cur a:hover {
+    background: var(--bq-red);
+    color: #fff;
+}
+
+/* ---------- 区块通用 ---------- */
+
+.r-section {
+    margin-top: 20px;
+    display: flex;
+    gap: 20px;
+}
+
+.r-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.r-right {
+    width: 320px;
+    flex: 0 0 320px;
+}
+
+/* 区块标题：左侧红色竖条 + 浅灰底 */
+.r-tit {
+    font-size: 16px;
+    font-weight: normal;
+    color: var(--bq-text);
+    line-height: 40px;
+    margin: 0 0 12px;
+    padding-left: 12px;
+    border-left: 3px solid var(--bq-red);
+    background: var(--bq-bg-2);
+    display: flex;
+    align-items: center;
+}
+
+.r-tit a,
+.r-tit .more {
+    margin-left: auto;
+    margin-right: 12px;
+    font-size: 12px;
+    color: var(--bq-text-3);
+    font-weight: normal;
+}
+
+.r-tit a:hover {
+    color: var(--bq-red);
+}
+
+/* 图标改为红色小方块，替代原主题的图片图标 */
+.r-ico {
+    display: none;
+}
+
+/* ---------- 书籍列表 ---------- */
+
+/* 网格排布：一屏尽量多书名 */
+.re-book,
+.free-book {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px 18px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.re-book li,
+.free-book li {
+    display: flex;
+    gap: 10px;
+    padding: 8px;
+    border-radius: var(--bq-radius);
+    transition: background .15s;
+}
+
+.re-book li:hover,
+.free-book li:hover {
+    background: var(--bq-bg-2);
+}
+
+/* 封面 */
+.re-pic-box,
+.f-pic-box {
+    flex: 0 0 72px;
+    width: 72px;
+    height: 96px;
+    overflow: hidden;
+    border-radius: var(--bq-radius);
+    background: var(--bq-bg-3);
+}
+
+.re-pic-box img,
+.f-pic-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 书名与作者 */
+.re-book-name {
+    font-size: 14px;
+    font-weight: normal;
+    line-height: 1.5;
+    margin: 0 0 4px;
+}
+
+.re-book-name a {
+    color: var(--bq-text);
+}
+
+.re-book-name a:hover {
+    color: var(--bq-red);
+}
+
+.source {
+    display: block;
+    font-size: 12px;
+    color: var(--bq-text-3);
+    margin-bottom: 4px;
+}
+
+/* 分类标签 */
+.r-type {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--bq-text-2);
+    background: var(--bq-bg-3);
+    padding: 1px 7px;
+    border-radius: var(--bq-radius);
+}
+
+.r-type:hover {
+    background: var(--bq-red);
+    color: #fff;
+}
+
+/* 轮播区 */
+.slide-box {
+    position: relative;
+}
+
+.slide-btn {
+    opacity: .35;
+}
+
+.slide-btn:hover {
+    opacity: 1;
+}
+
+/* ---------- 排行榜 ---------- */
+
+.tab-box {
+    display: flex;
+    border-bottom: 1px solid var(--bq-line);
+    margin-bottom: 8px;
+}
+
+.tab-box a {
+    flex: 1;
+    text-align: center;
+    line-height: 36px;
+    font-size: 14px;
+    color: var(--bq-text-2);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.tab-box a.cur {
+    color: var(--bq-red);
+    border-bottom-color: var(--bq-red);
+    font-weight: bold;
+}
+
+.r-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.r-list li {
+    display: flex;
+    align-items: center;
+    line-height: 34px;
+    border-bottom: 1px dashed var(--bq-line);
+    font-size: 13px;
+}
+
+/* 名次：前三名用红色突出 */
+.r-list li .num {
+    flex: 0 0 22px;
+    color: var(--bq-text-3);
+    font-style: italic;
+}
+
+.r-list li:nth-child(-n+3) .num {
+    color: var(--bq-red);
+    font-weight: bold;
+}
+
+.r-list li a {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.r-list li .author {
+    flex: 0 0 auto;
+    color: var(--bq-text-3);
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* ---------- 公告 ---------- */
+
+.read-notice {
+    background: #fffbe6;
+    border: 1px solid #ffe58f;
+    border-radius: var(--bq-radius);
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #8c6d1f;
+    margin-top: 16px;
+}
+
+.read-notice a {
+    color: var(--bq-red);
+}
+
+/* ---------- 分页 ---------- */
+
+.pagination,
+.page-box {
+    text-align: center;
+    margin: 24px 0;
+    font-size: 14px;
+}
+
+.pagination a,
+.pagination span,
+.page-box a,
+.page-box span {
+    display: inline-block;
+    min-width: 32px;
+    height: 32px;
+    line-height: 30px;
+    padding: 0 10px;
+    margin: 0 3px;
+    border: 1px solid var(--bq-line-2);
+    border-radius: var(--bq-radius);
+    color: var(--bq-text-2);
+    background: #fff;
+}
+
+.pagination a:hover,
+.page-box a:hover {
+    border-color: var(--bq-red);
+    color: var(--bq-red);
+}
+
+.pagination .cur,
+.pagination .active,
+.page-box .cur,
+.page-box .active {
+    background: var(--bq-red);
+    border-color: var(--bq-red);
+    color: #fff;
+}
+
+/* ---------- 页脚 ---------- */
+
+.footer {
+    margin-top: 30px;
+    padding: 20px 0;
+    background: var(--bq-bg-2);
+    border-top: 1px solid var(--bq-line);
+    text-align: center;
+    font-size: 12px;
+    color: var(--bq-text-3);
+    line-height: 2;
+}
+
+.footer a {
+    color: var(--bq-text-2);
+}
+
+.footer a:hover {
+    color: var(--bq-red);
+}
+
+/* ---------- 响应式 ---------- */
+
+@media (max-width: 1240px) {
+    .header,
+    .mnavbox,
+    .r-section,
+    .wrap {
+        width: 100%;
+        padding: 0 12px;
+        box-sizing: border-box;
+    }
+
+    .mnav {
+        width: 100% !important;
+        overflow-x: auto;
+    }
+
+    .re-book,
+    .free-book {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .r-section {
+        flex-direction: column;
+    }
+
+    .r-right {
+        width: 100%;
+        flex: none;
+    }
+
+    .re-book,
+    .free-book {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .searchbox {
+        margin-left: 12px;
+    }
+
+    .querybox .query {
+        width: 140px;
+    }
+
+    .hotwords {
+        display: none;
+    }
+}
