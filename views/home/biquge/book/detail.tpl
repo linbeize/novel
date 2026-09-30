@@ -106,7 +106,7 @@
                         </div>
                         <div class="tool-set-font" data-set="font">
                             <a href="javascript:;" data-font="minus" onclick="fontSizeMinus()">A-</a>
-                            <a href="javascript:;" class="tool-set-fontsize" id="wordSize">18</a>
+                            <a href="javascript:;" class="tool-set-fontsize" id="wordSize">20</a>
                             <a href="javascript:;" data-font="plus" onclick="fontSizePlus()">A+</a>
                         </div>
                     </div>
@@ -257,7 +257,10 @@
     <script type="text/javascript">
         var setting = {
             bgColor: null, //背景颜色
-            fontSize: 18,//字体大小
+            // 默认字号。JS 会把它内联写到 .book-content 上（内联样式优先级
+            // 高于 CSS），因此 CSS 里设 font-size 是无效的，只能改这里。
+            // 参考站正文为 19pt（约 25px），这里折中取 20px。
+            fontSize: 20,//字体大小
             fontSpacing: 0,//文字间距
             autoRoll: 0 //自动滚屏
         }

@@ -4,67 +4,68 @@
 笔趣阁风格主题（蓝）
 ====================
 
-参考 https://www.xinbiqug.com/ 的视觉语言。该站是经典的「蓝色笔趣阁」，
-配色与布局特征如下（数值取自其线上 CSS）：
+参考 https://www.xinbiqug.com/ 的配色，套用到本站模板上。
 
+重要：本文件只改「视觉」，不改「布局」
+--------------------------------------
+default 主题是 float 流式布局，尺寸是精心配好的：
+
+    .header     width 1200px  高 78px（含 padding-top 32px）
+    .mnavbox    高 36px，导航项 .mnavbox a 左右 padding 24px
+    .r-section  width 1170px  padding-left 30px
+    .r-left     width 899px   （与 .r-right 并排）
+    .re-book li float:left    width 179px（4 列自动换行）
+    .r-tit      行高 68px
+
+第一版曾把这些改成 flex/grid 与 980px 宽，结果导航折行、列表错位、
+轮播空白——布局被彻底打乱。因此这一版：
+
+    - 不动任何 width / height / float / padding 等尺寸属性
+    - 只覆盖 color、background、border、font-family 等视觉属性
+    - 需要加边框时，用 box-sizing 或改 border 而非 padding，避免撑破宽度
+
+要调风格，改下面变量区的颜色即可。
+
+配色取值（来自参考站线上 CSS）
+------------------------------
     页面背景   #e9faff   淡蓝
-    导航栏     #88c6e5   蓝底、白字 17px 加粗，高 40px
-    面板边框   #c3dfea   3px 蓝色实线
+    导航栏     #88c6e5   蓝底白字
+    面板边框   #c3dfea   蓝
     面板底色   #fef9ef   米黄
-    区块标题栏 #e1eced   淡蓝灰，30px 高，14px 加粗
-    表格表头   #c3dfea
+    标题栏     #e1eced   淡蓝灰
     链接       #6f78a7   蓝紫
-    次要文字   #b3b3b3
-    正文       #555  宋体 12px
-    内容宽度   980px
-    阅读正文   19pt、行距 150%、字距 0.2em
-
-结构差异说明
-------------
-本站模板是现代卡片式布局（r-section / re-book / book-content 等），
-与参考站的 HTML 结构（hotcontent / novelslist / #list）不同。
-因此这里不照搬其选择器，而是把上述视觉语言（配色、边框、字体、
-间距节奏）套用到本站的类名上，做到「观感一致」而非「结构一致」。
-
-改动风格时优先改下面的变量区。
+    正文       #555 宋体
 */
 
 :root {
-    /* ---- 配色（取自参考站）---- */
-    --bq-bg-page: #e9faff; /* 页面底色 */
-    --bq-bg-panel: #fef9ef; /* 面板/内容底色（米黄）*/
-    --bq-bg-head: #e1eced; /* 区块标题栏 */
-    --bq-bg-tab: #c3dfea; /* 表头/标签底 */
-    --bq-nav: #88c6e5; /* 导航主蓝 */
-    --bq-nav-dark: #6fb3d8; /* 导航悬停 */
-    --bq-border: #c3dfea; /* 主边框 */
-    --bq-border-2: #a6d3e8; /* 次边框（比主边框深一点）*/
+    --bq-bg-page: #e9faff;
+    --bq-bg-panel: #fef9ef;
+    --bq-bg-head: #e1eced;
+    --bq-nav: #88c6e5;
+    --bq-nav-dark: #6fb3d8;
+    --bq-border: #c3dfea;
+    --bq-border-2: #a6d3e8;
 
-    --bq-link: #6f78a7; /* 链接蓝紫 */
-    --bq-link-hover: #c00; /* 悬停转红（参考站 .novellist li a:visited）*/
-    --bq-text: #555; /* 正文 */
-    --bq-text-2: #888;
-    --bq-text-3: #b3b3b3; /* 次要信息 */
-
-    --bq-width: 980px;
+    --bq-link: #6f78a7;
+    --bq-link-hover: #c00;
+    --bq-text: #555;
+    --bq-text-3: #b3b3b3;
 }
 
-/* ---------- 全局 ---------- */
+/* ---------- 全局：只改字体与颜色 ---------- */
 
 body {
     background: var(--bq-bg-page);
     color: var(--bq-text);
     /* 参考站正文用宋体，这是传统小说站的标志性观感 */
-    font: 12px/1.7 SimSun, "宋体", "Microsoft YaHei", Arial, sans-serif;
+    font-family: SimSun, "宋体", "Microsoft YaHei", Arial, sans-serif;
 }
 
 a {
     color: var(--bq-link);
-    text-decoration: none;
 }
 
 a:hover {
-    text-decoration: underline;
     color: var(--bq-link-hover);
 }
 
@@ -76,138 +77,61 @@ a:hover {
 }
 
 .header {
-    width: var(--bq-width) !important;
-    height: 78px !important;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.header .logo img {
-    max-height: 60px;
-    width: auto;
-}
-
-/* 搜索框：参考站是浅灰边 + 灰按钮，保持朴素 */
-.searchbox {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    margin-left: 30px;
-}
-
-.searchform {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.querybox {
-    border: 1px solid var(--bq-border-2);
-    background: #fff;
-    height: 32px;
-    display: flex;
-    align-items: center;
-}
-
-.querybox .query {
-    border: none;
-    outline: none;
-    width: 300px;
-    height: 30px;
-    padding: 0 10px;
-    font: 14px/30px Arial, sans-serif;
+    /* 宽高沿用 default，只改配色 */
+    background: var(--bq-bg-page);
     color: var(--bq-text);
-    background: transparent;
 }
 
-/* 搜索按钮：参考站为浅灰底深蓝字 */
+/* 搜索框：参考站是浅灰边 + 灰按钮 */
+.querybox,
+.qborder {
+    background: #fff;
+    border-color: var(--bq-border-2);
+}
+
+.querybox .query,
+.qborder .query {
+    color: var(--bq-text);
+}
+
 .sbtn1,
 .searchform input[type="submit"] {
-    height: 34px;
-    line-height: 34px;
-    padding: 0 20px;
     background: #ddd;
     color: #2a4e8a;
-    border: 1px solid var(--bq-border-2);
-    border-left: none;
-    font-size: 14px;
-    cursor: pointer;
+    border-color: var(--bq-border-2);
 }
 
-.searchform input[type="submit"]:hover {
-    background: #d0d0d0;
-}
-
-.hotwords {
-    position: absolute;
-    left: 0;
-    top: 38px;
-    font-size: 12px;
-    color: var(--bq-text-3);
-    white-space: nowrap;
-}
-
+.hotwords,
 .hotwords a {
     color: var(--bq-text-3);
-    margin-right: 10px;
 }
 
-.header .login {
-    font-size: 12px;
-    color: gray;
-    white-space: nowrap;
-}
-
+.header .login,
 .header .login a {
     color: gray;
 }
 
-.header .login .divider {
-    margin: 0 8px;
-    color: var(--bq-border-2);
-}
-
-/* ---------- 主导航：蓝底白字，最高识别度 ---------- */
+/* ---------- 主导航：蓝底白字，最醒目的识别特征 ---------- */
 
 .mnavbox {
     background: var(--bq-nav);
-    border: none;
-}
-
-.mnav {
-    width: var(--bq-width) !important;
-    height: 40px;
-    display: flex;
-    list-style: none;
-    margin: 0 auto;
-    padding: 0;
-    overflow: hidden;
-}
-
-.mnav li {
-    line-height: 40px;
-}
-
-.mnav li a {
-    display: block;
-    padding: 0 13px;
     color: #fff;
-    font-size: 17px;
-    font-weight: bold;
+}
+
+.mnavbox a {
+    color: #fff;
     text-decoration: none;
 }
 
-.mnav li a:hover {
+.mnavbox a:hover {
     background: var(--bq-nav-dark);
     color: #fff;
     text-decoration: none;
 }
 
-/* 当前分类：深一号的蓝，区别于普通项 */
-.mnav li.cur a,
-.mnav li.cur > a {
+/* 当前分类：深一号的蓝 */
+.mnav li.cur,
+.mnav li.cur a {
     background: var(--bq-nav-dark);
     color: #fff;
 }
@@ -217,315 +141,204 @@ a:hover {
     color: #fff;
 }
 
-/* ---------- 区块：蓝色描边 + 米黄底 ---------- */
-
-.r-section,
-.wrap {
-    width: var(--bq-width) !important;
-    margin: 10px auto;
-    display: flex;
-    gap: 10px;
+/* 右侧「全部小说」下拉沿用深色，避免与主蓝冲突 */
+.mnav .all-sort {
+    background: #5aa8cc;
+    border-top-color: var(--bq-nav);
 }
 
-.r-left {
-    flex: 1;
-    min-width: 0;
+/* ---------- 区块容器：米黄底 + 蓝框 ---------- */
+
+/*
+.r-section 的蓝框用 outline 而非 border
+----------------------------------------
+default 的尺寸是：width 1170px + padding-left 30px = 外框 1200px（content-box），
+内部正好容纳 r-left(899) + r-right(270) = 1169，是算好的。
+
+第一版加了 border:3px + box-sizing:border-box，于是外框缩到 1170、
+内容区再减 6px 边框只剩 1134，装不下 1169，导致右侧栏换行掉到下方
+（实测 .r-right 从 @(1023,216) 跑到 @(141,739)）。
+
+outline 不参与盒模型计算，配合 outline-offset:-3px 向内描边，
+视觉上有 3px 蓝框，但布局尺寸分毫不动。
+*/
+.r-section {
+    background: var(--bq-bg-panel);
+    outline: 3px solid var(--bq-border);
+    outline-offset: -3px;
 }
 
-.r-right {
-    width: 265px;
-    flex: 0 0 265px;
-}
-
-/* 区块标题：淡蓝灰条，14px 加粗，与参考站的 h2 一致 */
 .r-tit {
-    font-size: 14px;
-    font-weight: bold;
-    color: var(--bq-text);
-    line-height: 30px;
-    height: 30px;
-    margin: 0;
-    padding: 0 0 0 10px;
-    background: var(--bq-bg-head);
-    border-bottom: 1px solid #ddd;
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-}
-
-.r-tit a,
-.r-tit .more {
-    margin-left: auto;
-    margin-right: 10px;
-    font-size: 12px;
-    font-weight: normal;
+    /* 只改颜色。
+       注意不要在此处改 font-family：正文改为宋体后，标题若跟着用宋体，
+       因宋体字宽较窄，标题宽度会由 110px 缩到 80px（实测）。
+       标题保持 default 的字体即可。 */
+    font-family: "microsoft yahei", "Microsoft YaHei", sans-serif;
     color: var(--bq-link);
 }
 
-/* 原主题的图片小图标在这里不适用（参考站是纯文字标题） */
-.r-ico {
-    display: none;
+/* 区块标题右侧的「更多」 */
+.r-tit a,
+.r-tit .more {
+    color: var(--bq-link);
 }
 
-/* 内容区：米黄底 + 蓝边框 */
+/*
+标题图标：保留占位，只换图
+--------------------------
+default 的 .r-ico 是 float:left + padding-left:30px 的图片图标，
+标题总宽 110px = 文字 80px + 图标占位 30px。
+
+第一版直接 display:none，标题宽度掉到 80px，实测与 default 不一致。
+因此这里保留原有尺寸行为，只把图标图片换成参考站风格的纯色小方块。
+*/
+.r-ico {
+    /* 保留 default 的 float/height/padding-left，只覆盖背景图 */
+    background: var(--bq-nav);
+    background-image: none;
+    border-radius: 0;
+}
+
+/* ---------- 书籍列表：只加分隔与底色，不动 179px 的 li 宽度 ---------- */
+
 .re-book,
 .free-book,
 .hot-book,
 .boy-list,
 .girl-list,
-.choice-book,
-.rank {
+.choice-book {
     background: var(--bq-bg-panel);
-    border: 3px solid var(--bq-border);
-    border-top: none;
-    padding: 10px;
 }
 
-/* ---------- 书籍条目 ---------- */
-
-.re-book,
-.free-book {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px 10px;
-    list-style: none;
-    margin: 0;
+.re-book {
+    border-color: var(--bq-border-2);
 }
 
-.re-book li,
-.free-book li {
-    display: flex;
-    gap: 8px;
-    padding: 8px 6px;
-    border-bottom: 1px dotted var(--bq-border-2);
-    overflow: hidden;
-}
-
-.re-book li:hover,
-.free-book li:hover {
-    background: #fff8e8;
-}
-
+/* 封面加白底细框，是参考站的做法 */
+/* 封面白底细框：同样用 outline，避免 border 撑大尺寸影响 4 列排布 */
 .re-pic-box,
-.f-pic-box {
-    flex: 0 0 72px;
-    width: 72px;
-    height: 96px;
-    overflow: hidden;
+.f-pic-box,
+.pic-container {
     background: #fff;
-    border: 1px solid #ddd;
-    padding: 1px;
-}
-
-.re-pic-box img,
-.f-pic-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.re-book-name,
-.f-book-name {
-    font-size: 13px;
-    font-weight: normal;
-    line-height: 1.6;
-    margin: 0 0 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    outline: 1px solid #ddd;
+    outline-offset: -1px;
 }
 
 .re-book-name a,
-.f-book-name a {
+.f-book-name a,
+.c-book-name a {
     color: var(--bq-link);
+}
+
+.re-book-name a:hover,
+.f-book-name a:hover,
+.c-book-name a:hover {
+    color: var(--bq-link-hover);
 }
 
 .source {
-    display: block;
-    font-size: 12px;
     color: var(--bq-text-3);
-    margin-bottom: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .r-type {
-    display: inline-block;
-    font-size: 12px;
-    color: var(--bq-link);
     background: var(--bq-bg-head);
-    padding: 0 6px;
-    border: 1px solid var(--bq-border-2);
+    border-color: var(--bq-border-2);
+    color: var(--bq-link);
 }
 
-/* ---------- 排行榜 / 列表 ---------- */
+/* ---------- 排行榜 ---------- */
 
 .tab-box {
-    display: flex;
     background: var(--bq-bg-head);
-    border: 3px solid var(--bq-border);
-    border-bottom: 1px solid var(--bq-border-2);
-    padding-left: 10px;
+    border-bottom: 1px solid #ddd;
 }
 
 .tab-box a {
-    flex: 1;
-    text-align: center;
-    line-height: 28px;
-    font-size: 14px;
-    font-weight: normal;
     color: #999;
-    cursor: pointer;
 }
 
 .tab-box a.cur {
     color: #333;
-    font-weight: bold;
     border-bottom: 2px solid var(--bq-nav);
 }
 
-.r-list {
-    list-style: none;
-    margin: 0;
-    padding: 8px 10px;
-    background: var(--bq-bg-panel);
-    border: 3px solid var(--bq-border);
-    border-top: none;
-}
-
 .r-list li {
-    display: flex;
-    align-items: center;
-    line-height: 27px;
-    height: 27px;
     border-bottom: 1px solid #ddd;
-    font-size: 12px;
+    color: var(--bq-text-3);
 }
 
-/* 名次数字：斜体等宽，与参考站的 span.num 一致 */
 .r-list li .num {
-    flex: 0 0 22px;
     font-family: Verdana, Arial, sans-serif;
     font-style: italic;
-    font-size: 10pt;
-    color: #999;
+    color: var(--bq-text-3);
 }
 
 .r-list li:nth-child(-n+3) .num {
-    color: #c00;
+    color: var(--bq-link-hover);
     font-weight: bold;
 }
 
 .r-list li a {
-    flex: 1;
     color: var(--bq-link);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.r-list li .author {
-    flex: 0 0 auto;
-    color: var(--bq-text-3);
-    font-size: 12px;
-    margin-left: 8px;
 }
 
 /* ---------- 公告 ---------- */
 
 .read-notice {
     background: #fff9d9;
-    border: 1px solid #ffcc33;
-    padding: 8px 12px;
-    font-size: 12px;
+    border-color: #ffcc33;
     color: #8c6d1f;
-    margin: 10px auto;
-    width: var(--bq-width);
-    box-sizing: border-box;
 }
 
 .read-notice a {
-    color: #c00;
+    color: var(--bq-link-hover);
 }
 
-/* ---------- 阅读页 ---------- */
+/* ---------- 阅读页正文 ---------- */
 
-/* 正文：参考站用 19pt + 0.2em 字距 + 150% 行距，可读性优先 */
+/*
+参考站正文：19pt、行距 150%、字距 0.2em。
+字号与行距属视觉范畴，可以放心覆盖；不改宽度与 padding。
+*/
+/*
+正文样式。
+注意：此处不设 font-size —— 阅读页的 JS 会按用户选择把字号内联写到
+.book-content 上（模板里 setFontSize() 调 $().css("font-size", v)），
+内联样式优先级高于本文件，设了也不生效。默认字号在 detail.tpl 的
+setting.fontSize 里定义。
+*/
 .book-content {
     font-family: "方正启体简体", "Microsoft YaHei", "微软雅黑", SimSun, sans-serif;
-    font-size: 19pt;
     line-height: 150%;
-    letter-spacing: .06em; /* 参考站为 .2em，中文密排下略收一点更耐看 */
+    letter-spacing: .04em;
     color: var(--bq-text);
-    padding: 15px 0;
 }
 
-/* 正文段落缩进 2 字（参考站 #intro p 的做法，中文排版惯例） */
 .book-content p {
     text-indent: 2em;
-    margin: 10px 0 0;
 }
 
 .book-title {
     font-family: 黑体, SimHei, "Microsoft YaHei", sans-serif;
-    font-size: 25px;
-    line-height: 35px;
-    font-weight: bold;
-    text-align: center;
-    padding: 10px 0;
-}
-
-.book-wrap {
-    border: 2px solid var(--bq-nav);
-    background: #fff;
-    margin: 10px auto;
-    padding: 0 20px;
-}
-
-.book-view .book-wrap {
-    border: none;
+    color: var(--bq-text);
 }
 
 .book-header {
-    border-bottom: 1px solid var(--bq-nav);
     background: var(--bq-bg-head);
-    line-height: 40px;
-    padding: 0 10px;
-}
-
-/* 上/下章按钮 */
-.book-horizon-btn,
-.book-ctrl {
-    font-size: 14px;
-    color: var(--bq-link);
-}
-
-.book-horizon-btn:hover {
-    color: var(--bq-link-hover);
+    border-bottom-color: var(--bq-nav);
 }
 
 /* ---------- 目录页 ---------- */
 
-/* 参考站目录为三列，条目虚线分隔 */
 .contents-lst,
-.book-lst {
+.book-lst,
+.category-lst {
     background: var(--bq-bg-panel);
-    border: 2px solid var(--bq-nav);
-    padding: 10px;
-}
-
-.contents-lst li,
-.book-lst li {
-    border-bottom: 1px dashed #ccc;
-    line-height: 25px;
-    height: 25px;
-    overflow: hidden;
 }
 
 .contents-lst li a,
-.book-lst li a {
+.book-lst li a,
+.category-lst li a {
     color: #444;
 }
 
@@ -534,39 +347,22 @@ a:hover {
     color: var(--bq-link-hover);
 }
 
-/* 目录标题栏（卷名） */
-.contents-lst-tit,
-.book-lst-tit {
-    background: var(--bq-bg-tab);
-    font-size: 14px;
-    line-height: 28px;
-    text-align: center;
-    padding: 5px 10px;
-}
-
-/* 书籍信息区 */
 .detail-info,
 .book-info {
     background: var(--bq-bg-head);
-    border: 1px solid var(--bq-border-2);
+    border-color: var(--bq-border-2);
 }
 
 .detail-thumb,
 .cover {
     background: var(--bq-bg-head);
-    border: 1px solid #ddd;
-    padding: 3px;
+    border-color: #ddd;
 }
 
-/* 书籍简介 */
 .brief-intro,
 .detail-description,
 .brief-intro2 {
-    border-top: 1px dashed var(--bq-nav);
-    padding: 10px;
-    line-height: 150%;
-    font-size: 13px;
-    text-indent: 2em;
+    border-top-color: var(--bq-nav);
 }
 
 /* ---------- 按钮 ---------- */
@@ -578,10 +374,7 @@ a:hover {
 .r-show {
     background: var(--bq-nav);
     color: #fff;
-    border: 1px solid var(--bq-border-2);
-    font-size: 14px;
-    padding: 5px 16px;
-    cursor: pointer;
+    border-color: var(--bq-border-2);
 }
 
 .btn-read:hover,
@@ -591,28 +384,15 @@ a:hover {
 .r-show:hover {
     background: var(--bq-nav-dark);
     color: #fff;
-    text-decoration: none;
 }
 
 /* ---------- 分页 ---------- */
-
-.pagination,
-.page-box {
-    text-align: center;
-    margin: 15px auto;
-    font-size: 14px;
-}
 
 .pagination a,
 .pagination span,
 .page-box a,
 .page-box span {
-    display: inline-block;
-    min-width: 24px;
-    line-height: 20px;
-    padding: 0 6px;
-    margin: 0 2px;
-    border: 1px solid var(--bq-border-2);
+    border-color: var(--bq-border-2);
     background: #fff;
     color: var(--bq-link);
 }
@@ -621,7 +401,6 @@ a:hover {
 .page-box a:hover {
     background: var(--bq-nav);
     color: #fff;
-    text-decoration: none;
 }
 
 .pagination .cur,
@@ -631,64 +410,103 @@ a:hover {
     background: var(--bq-nav-dark);
     border-color: var(--bq-border-2);
     color: #fff;
-    font-weight: bold;
 }
 
 /* ---------- 页脚 ---------- */
 
 .footer {
-    width: var(--bq-width);
-    margin: 10px auto;
-    text-align: center;
-    font-size: 12px;
     color: var(--bq-text-3);
-    line-height: 20px;
 }
 
 .footer a {
     color: var(--bq-link);
 }
 
-/* ---------- 响应式 ---------- */
+/* ==========================================================================
+提高特异性：覆盖 default 中优先级更高的规则
+==========================================================================
 
-@media (max-width: 1000px) {
-    .header,
-    .mnavbox,
-    .r-section,
-    .wrap,
-    .read-notice,
-    .footer {
-        width: 100% !important;
-        padding: 0 10px;
-        box-sizing: border-box;
-    }
+default 里有若干携带上下文的选择器，特异性高于本主题的单类选择器，
+例如 .r-section h3 a { color:#0d0d0d } 的特异性是 (0,2,1)，
+而 .re-book-name a 只有 (0,1,1)，因此单纯写 .re-book-name a 不生效
+（实测书名颜色仍是 rgb(13,13,13)）。
 
-    .mnav {
-        width: 100% !important;
-        overflow-x: auto;
-    }
+这里用「与对方同层级或更高」的选择器来覆盖，避免动用 !important——
+后者一旦铺开会让后续调整样式变得难以预测。
+========================================================================= */
 
-    .re-book,
-    .free-book {
-        grid-template-columns: repeat(2, 1fr);
-    }
+/* 书名：default 用 .r-section h3 a / .c-book-name a，这里同层级覆盖 */
+.r-section .re-book-name a,
+.r-section .f-book-name a,
+.r-section .c-book-name a,
+.r-section h2 a,
+.r-section h3 a {
+    color: var(--bq-link);
 }
 
-@media (max-width: 768px) {
-    .r-section {
-        flex-direction: column;
-    }
+.r-section .re-book-name a:hover,
+.r-section .f-book-name a:hover,
+.r-section .c-book-name a:hover,
+.r-section h2 a:hover,
+.r-section h3 a:hover {
+    color: var(--bq-link-hover);
+}
 
-    .r-right {
-        width: 100%;
-        flex: none;
-    }
+/* 榜单标签 */
+.tab-box a {
+    color: #999;
+}
 
-    .book-content {
-        font-size: 16pt;
-    }
+.tab-box a.cur,
+.tab-box a:hover,
+.tab-box a:active {
+    color: var(--bq-link);
+}
 
-    .hotwords {
-        display: none;
-    }
+/* 分类选择条 */
+.sort-choice a {
+    color: var(--bq-text-2);
+}
+
+.sort-choice a.cur {
+    color: var(--bq-link);
+}
+
+/* 热搜词 */
+.hotwords a {
+    color: var(--bq-text-3);
+}
+
+.hotwords a:hover {
+    color: var(--bq-link);
+}
+
+/* 顶部登录区 */
+.login a,
+.nav-login a {
+    color: gray;
+}
+
+.login a:hover {
+    color: var(--bq-link-hover);
+}
+
+/* 榜单条目链接 */
+.r-list li a,
+.r-section .r-list li a {
+    color: var(--bq-link);
+}
+
+.r-list li a:hover {
+    color: var(--bq-link-hover);
+}
+
+/* 全局兜底：放在最后，特异性与 default 的 a{color:#262626} 相同，
+   加载更晚故生效 */
+.r-section a {
+    color: var(--bq-link);
+}
+
+.r-section a:hover {
+    color: var(--bq-link-hover);
 }
